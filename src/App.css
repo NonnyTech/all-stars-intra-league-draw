@@ -4,6 +4,88 @@
   position: relative;
 }
 
+.login-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100svh;
+  padding: 24px;
+}
+
+.login-card {
+  background:
+    linear-gradient(180deg, rgba(13, 44, 36, 0.94) 0%, rgba(6, 25, 20, 0.94) 100%);
+  border: 1px solid rgba(244, 201, 93, 0.42);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+  max-width: 560px;
+  padding: 34px;
+  width: 100%;
+}
+
+.login-card h1 {
+  font-size: clamp(34px, 6vw, 56px);
+}
+
+.login-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.login-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 4px;
+}
+
+.login-toggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #cbd5e1;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  min-height: 42px;
+}
+
+.login-toggle button.active {
+  background: #f4c95d;
+  color: #071b12;
+}
+
+.login-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.login-form label span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.login-form input {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 6px;
+  color: #081611;
+  font: inherit;
+  min-height: 48px;
+  padding: 0 12px;
+}
+
+.login-error {
+  color: #fecaca;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+}
+
 .app-shell::before {
   border: 2px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
@@ -25,6 +107,31 @@
   margin: 0 auto 24px;
   max-width: 1220px;
   padding: 14px 0 8px;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.role-badge {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 10px 14px;
+  text-transform: uppercase;
+}
+
+.role-badge.admin {
+  background: rgba(244, 201, 93, 0.18);
+  border-color: rgba(244, 201, 93, 0.55);
+  color: #f4c95d;
 }
 
 .eyebrow {
@@ -66,6 +173,12 @@ h2 {
   grid-template-columns: minmax(260px, 330px) minmax(320px, 0.9fr) minmax(260px, 350px);
   margin: 0 auto;
   max-width: 1220px;
+}
+
+.viewer-note {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .panel,
@@ -439,6 +552,10 @@ h2 {
   .header-band {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
   }
 
   .workspace {
