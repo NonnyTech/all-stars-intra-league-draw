@@ -14,7 +14,7 @@ const io = new Server(httpServer, {
 })
 
 const PORT = process.env.PORT || 3000
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'allstars2026'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AllStars@2026$'
 const MEMBER_PASSWORD = process.env.MEMBER_PASSWORD || 'watch2026'
 
 const TEAMS = [
