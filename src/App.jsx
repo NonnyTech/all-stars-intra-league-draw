@@ -5,14 +5,95 @@ import './App.css'
 const socket = io()
 
 const fallbackTeams = [
-  { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e' },
-  { id: 'star', name: 'Morning Star', color: '#050505' },
-  { id: 'tower', name: 'Tower of David', color: '#e32227' },
-  { id: 'mirror', name: 'Mirror of Justice', color: '#4cc9ff' },
+  { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e', logo: '/team-logos/seat-of-wisdom.jpg' },
+  { id: 'star', name: 'Morning Star', color: '#050505', logo: '/team-logos/morning-star.jpg' },
+  { id: 'tower', name: 'Tower of David', color: '#e32227', logo: '/team-logos/tower-of-david.jpg' },
+  { id: 'mirror', name: 'Mirror of Justice', color: '#4cc9ff', logo: '/team-logos/mirror-of-justice.jpg' },
 ]
 
+const teamLogoById = Object.fromEntries(fallbackTeams.map((team) => [team.id, team.logo]))
+const finalTeamPlayers = {
+  wisdom: [
+    'Afam',
+    'Victor Dumbri',
+    'Solar',
+    'Monday',
+    'Pius',
+    'Edwin',
+    'Stanley Njoku',
+    'Jerome',
+    'Princewill',
+    'Dickson',
+    'Ifeanyi Onyeguli',
+    'Ebuka Ukah',
+    'Cosmos',
+    'David Omana',
+    'Arinze Ugboeke',
+  ],
+  star: [
+    'Obinna',
+    'Emeka Ekediegwu',
+    'Erike',
+    'Nonny',
+    'Barrister',
+    'Stanley Ugwu',
+    'Uche oriaku',
+    'Obiorah Ani',
+    'Ifeanyi Akume',
+    'Tobby Ekwueme',
+    'Bernard',
+    'Nelson',
+    'Bert Nwaru',
+    'Austine Adeyemi',
+    'Austine Chukwu',
+  ],
+  tower: [
+    'Inzaghi',
+    'Anyanwu U',
+    'Miracle',
+    'Yemi',
+    'Sir kay',
+    'Kevin ani',
+    'Alex Nwaru',
+    'Patrick Kolu',
+    'Epa',
+    'Destiny',
+    'Chuba Okoli',
+    'Ebuka Ani',
+    'Chief Emeruwa',
+    'Ifeanyi Ebieye',
+    'Remi Agim',
+  ],
+  mirror: [
+    'Martins',
+    'Adebayo philip',
+    'Collins',
+    'Michael',
+    'Nonso Ike',
+    'Nwakanobi',
+    'Henry ike',
+    'Emma Anyanwu',
+    'Hyginus',
+    'Chisom',
+    'Sunday Okoro',
+    'Oti',
+    'Hilary nsofor',
+    'Chief Onwa',
+    'Ben Haul',
+  ],
+}
+
+function buildFinalAssignments() {
+  return fallbackTeams.flatMap((team) =>
+    finalTeamPlayers[team.id].map((player) => ({
+      player,
+      team,
+    })),
+  )
+}
+
 const initialState = {
-  assignments: [],
+  assignments: buildFinalAssignments(),
   currentGroupAssignments: [],
   currentPlayerIndex: 0,
   isSpinning: false,
@@ -30,6 +111,7 @@ function App() {
   const [password, setPassword] = useState('')
   const [loginMode, setLoginMode] = useState('member')
   const [loginError, setLoginError] = useState('')
+  const [memberView, setMemberView] = useState('home')
   const isAdmin = role === 'admin'
   const isLoggedIn = role === 'admin' || role === 'member'
 
@@ -45,14 +127,22 @@ function App() {
     teams,
   } = drawState
 
-  const teamById = useMemo(() => Object.fromEntries(teams.map((team) => [team.id, team])), [teams])
+  const normalizedTeams = teams.map((team) => ({
+    ...team,
+    logo: team.logo || teamLogoById[team.id] || '',
+  }))
+  const teamById = useMemo(
+    () => Object.fromEntries(normalizedTeams.map((team) => [team.id, team])),
+    [normalizedTeams],
+  )
   const visibleRemainingTeams = remainingTeams.map((team) => teamById[team.id] ?? team)
   const currentPlayerName = players[currentPlayerIndex]?.trim()
-  const isGroupComplete = currentGroupAssignments.length === teams.length
+  const isGroupComplete = currentGroupAssignments.length === normalizedTeams.length
   const canSpin = isAdmin && Boolean(currentPlayerName) && remainingTeams.length > 0 && !isSpinning
-  const teamRosters = teams.map((team) => ({
+  const displayAssignments = assignments.length > 0 ? assignments : buildFinalAssignments()
+  const teamRosters = normalizedTeams.map((team) => ({
     ...team,
-    players: assignments.filter((assignment) => assignment.team.id === team.id),
+    players: displayAssignments.filter((assignment) => assignment.team.id === team.id),
   }))
 
   useEffect(() => {
@@ -107,6 +197,7 @@ function App() {
     socket.emit('login', { role: attemptedMode, password }, (response) => {
       if (response?.ok) {
         setRole(attemptedMode)
+        setMemberView('home')
         setPassword('')
         return
       }
@@ -142,20 +233,67 @@ function App() {
     setPassword('')
     setLoginError('')
     setLoginMode('member')
+    setMemberView('home')
   }
 
   function exportTeamList() {
     window.print()
   }
 
+  function teamInitials(teamName) {
+    return teamName
+      .split(' ')
+      .map((word) => word[0])
+      .join('')
+      .slice(0, 3)
+  }
+
+  function TeamLogo({ team }) {
+    if (team.logo) {
+      return <img src={team.logo} alt={`${team.name} logo`} />
+    }
+
+    return <span>{teamInitials(team.name)}</span>
+  }
+
+  function TeamRosterList({ variant = 'compact' }) {
+    return (
+      <div className={`roster-list ${variant === 'showcase' ? 'showcase' : ''}`}>
+        {teamRosters.map((team) => (
+          <div className="roster-card" key={team.id} style={{ '--team-color': team.color }}>
+            <div className="roster-title">
+              <i></i>
+              <strong>{team.name}</strong>
+              <span>{team.players.length}</span>
+            </div>
+            {variant === 'showcase' && (
+              <div className="team-logo" style={{ '--team-color': team.color }}>
+                <TeamLogo team={team} />
+              </div>
+            )}
+            {team.players.length === 0 ? (
+              <p className="empty-state">Awaiting player list</p>
+            ) : (
+              <ol>
+                {team.players.map((assignment, index) => (
+                  <li key={`${assignment.player}-${team.id}-${index}`}>{assignment.player}</li>
+                ))}
+              </ol>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   if (!isLoggedIn) {
     return (
       <main className="login-page">
         <section className="login-card">
-          <p className="eyebrow">Official Tournament Draw</p>
-          <h1>2026 All Stars Intra League Draw</h1>
+          <p className="eyebrow">All Stars Intra League</p>
+          <h1>2026 All Stars League</h1>
           <p className="save-status">
-            {isConnected ? 'Login to enter the live draw dashboard.' : 'Connecting to live draw...'}
+            {isConnected ? 'Login to enter the league portal.' : 'Connecting to league portal...'}
           </p>
 
           <form className="login-form" onSubmit={login}>
@@ -196,12 +334,77 @@ function App() {
     )
   }
 
+  if (!isAdmin) {
+    return (
+      <main className="app-shell">
+        <section className="header-band">
+          <div>
+            <p className="eyebrow">All Stars Intra League</p>
+            <h1>2026 All Stars League</h1>
+            <p className="save-status">
+              {isConnected ? 'Post-draw portal connected.' : 'Reconnecting to portal...'}
+            </p>
+          </div>
+          <div className="header-actions">
+            <span className="role-badge">Member view</span>
+            <button className="ghost-button" type="button" onClick={logout}>
+              Logout
+            </button>
+          </div>
+        </section>
+
+        {memberView === 'home' && (
+          <section className="member-home">
+            <div>
+              <p className="eyebrow">All Stars Intra League</p>
+              <h2>Welcome to 2026 All Stars Intra League</h2>
+            </div>
+            <div className="member-actions">
+              <button className="primary-button" type="button" onClick={() => setMemberView('draws')}>
+                View draws
+              </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('teams')}>
+                View team list
+              </button>
+            </div>
+          </section>
+        )}
+
+        {memberView === 'draws' && (
+          <section className="member-message">
+            <p className="eyebrow">Draw Status</p>
+            <h2>Draws have been completed.</h2>
+            <p>The 2026 All Stars Intra League team draw is now closed.</p>
+            <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+              Back
+            </button>
+          </section>
+        )}
+
+        {memberView === 'teams' && (
+          <section className="member-teams">
+            <div className="member-section-header">
+              <div>
+                <p className="eyebrow">Team Rosters</p>
+                <h2>Full team list</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                Back
+              </button>
+            </div>
+            <TeamRosterList variant="showcase" />
+          </section>
+        )}
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       <section className="header-band">
         <div>
-          <p className="eyebrow">Official Tournament Draw</p>
-          <h1>2026 All Stars Intra League Draw</h1>
+          <p className="eyebrow">All Stars Intra League</p>
+          <h1>2026 All Stars League</h1>
           <p className="save-status">
             {isConnected ? 'Live draw connected for admins and viewers.' : 'Reconnecting to live draw...'}
           </p>
@@ -310,26 +513,7 @@ function App() {
             <span>{assignments.length} players drawn</span>
           </div>
 
-          <div className="roster-list">
-            {teamRosters.map((team) => (
-              <div className="roster-card" key={team.id} style={{ '--team-color': team.color }}>
-                <div className="roster-title">
-                  <i></i>
-                  <strong>{team.name}</strong>
-                  <span>{team.players.length}</span>
-                </div>
-                {team.players.length === 0 ? (
-                  <p className="empty-state">Awaiting first player</p>
-                ) : (
-                  <ol>
-                    {team.players.map((assignment, index) => (
-                      <li key={`${assignment.player}-${team.id}-${index}`}>{assignment.player}</li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            ))}
-          </div>
+          <TeamRosterList />
 
           {isAdmin && isGroupComplete && (
             <button className="primary-button full" type="button" onClick={startNextGroup}>

@@ -175,6 +175,80 @@ h2 {
   max-width: 1220px;
 }
 
+.member-home,
+.member-message,
+.member-teams {
+  background:
+    linear-gradient(180deg, rgba(13, 44, 36, 0.92) 0%, rgba(6, 25, 20, 0.92) 100%);
+  border: 1px solid rgba(244, 201, 93, 0.34);
+  border-radius: 8px;
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.26);
+  margin: 0 auto;
+  max-width: 1220px;
+  padding: 28px;
+}
+
+.member-home {
+  align-items: center;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 320px;
+}
+
+.member-home h2,
+.member-message h2,
+.member-teams h2 {
+  font-size: clamp(28px, 4vw, 46px);
+}
+
+.member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.member-actions .primary-button,
+.member-actions .ghost-button {
+  min-width: 180px;
+}
+
+.member-message {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+  padding: 22px;
+}
+
+.member-message p:not(.eyebrow) {
+  color: #cbd5e1;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.member-message h2 {
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.member-message .ghost-button {
+  min-height: 40px;
+  padding: 0 16px;
+  width: auto;
+}
+
+.member-section-header {
+  align-items: center;
+  border-bottom: 1px solid rgba(244, 201, 93, 0.24);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+}
+
 .viewer-note {
   color: #cbd5e1;
   font-size: 14px;
@@ -483,6 +557,10 @@ h2 {
   gap: 12px;
 }
 
+.roster-list.showcase {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .roster-card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -537,6 +615,33 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.team-logo {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--team-color) 70%, #ffffff);
+  border-radius: 8px;
+  display: flex;
+  height: 190px;
+  justify-content: center;
+  margin: 18px auto 14px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.team-logo img {
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+  width: 100%;
+}
+
+.team-logo span {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
+}
+
 @media (max-width: 980px) {
   .app-shell {
     padding: 18px;
@@ -559,6 +664,24 @@ h2 {
   }
 
   .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .member-home,
+  .member-section-header {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .member-section-header {
+    flex-direction: column;
+  }
+
+  .member-actions {
+    justify-content: flex-start;
+  }
+
+  .roster-list.showcase {
     grid-template-columns: 1fr;
   }
 

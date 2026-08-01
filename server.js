@@ -18,16 +18,95 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AllStars@2026$'
 const MEMBER_PASSWORD = process.env.MEMBER_PASSWORD || 'watch2026'
 
 const TEAMS = [
-  { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e' },
-  { id: 'star', name: 'Morning Star', color: '#050505' },
-  { id: 'tower', name: 'Tower of David', color: '#e32227' },
-  { id: 'mirror', name: 'Mirror of Justice', color: '#4cc9ff' },
+  { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e', logo: '/team-logos/seat-of-wisdom.jpg' },
+  { id: 'star', name: 'Morning Star', color: '#050505', logo: '/team-logos/morning-star.jpg' },
+  { id: 'tower', name: 'Tower of David', color: '#e32227', logo: '/team-logos/tower-of-david.jpg' },
+  { id: 'mirror', name: 'Mirror of Justice', color: '#4cc9ff', logo: '/team-logos/mirror-of-justice.jpg' },
 ]
 
 const initialPlayers = ['', '', '', '']
+const FINAL_TEAM_PLAYERS = {
+  wisdom: [
+    'Afam',
+    'Victor',
+    'Solar',
+    'Monday',
+    'Pius',
+    'Okekpe',
+    'Stanley Ugwu',
+    'Jerome',
+    'Princewill',
+    'Dickson',
+    'Ifeanyi Onyeguli',
+    'Ebuka Ukah',
+    'Cosmos',
+    'David Omana',
+    'Arinze Ugboeke',
+  ],
+  star: [
+    'Obinna',
+    'Emeka Eke',
+    'Erike',
+    'Nonny',
+    'Barristrs',
+    'Stanley Ugwu',
+    'Uche oriaku',
+    'Obiorah Ani',
+    'Ifeanyi Akume',
+    'Tobby Ekwueme',
+    'Bernard',
+    'Nelson',
+    'Beer Nwaru',
+    'Austine Adeyemi',
+    'Austine Chukwu',
+  ],
+  tower: [
+    'Inzaghi',
+    'Anyanwu U',
+    'Miracle',
+    'Yemi',
+    'Sir kay',
+    'Kevin ani',
+    'Alex Nwaru',
+    'Patrick Kolu',
+    'Epa',
+    'Destiny',
+    'Chuba Okoli',
+    'Ebuka Ani',
+    'Chief Emeruwa',
+    'Ifeanyi Ebieye',
+    'Remi Agim',
+  ],
+  mirror: [
+    'Martins',
+    'Adebayo philip',
+    'Collins',
+    'Michael',
+    'Nonso Ike',
+    'Nwakanobi',
+    'Henry ike',
+    'Emma Anyanwu',
+    'Hyginus',
+    'Chisom',
+    'Sunday Okoro',
+    'Oti',
+    'Hilary nsofor',
+    'Onwa',
+    'Ben Haul',
+  ],
+}
+
+function buildFinalAssignments() {
+  return TEAMS.flatMap((team) =>
+    FINAL_TEAM_PLAYERS[team.id].map((player) => ({
+      player,
+      team,
+    })),
+  )
+}
 
 let drawState = {
-  assignments: [],
+  assignments: buildFinalAssignments(),
   currentGroupAssignments: [],
   currentPlayerIndex: 0,
   isSpinning: false,
