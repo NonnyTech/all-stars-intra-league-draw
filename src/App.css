@@ -214,6 +214,13 @@ h2 {
   min-width: 180px;
 }
 
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .member-message {
   align-items: flex-start;
   display: grid;
@@ -642,6 +649,107 @@ h2 {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
 }
 
+.team-download {
+  margin-top: 14px;
+}
+
+.fixture-list {
+  display: grid;
+  gap: 14px;
+}
+
+.fixture-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.fixture-teams {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  text-align: center;
+}
+
+.fixture-teams strong {
+  color: #ffffff;
+  font-size: clamp(18px, 3vw, 28px);
+  overflow-wrap: anywhere;
+}
+
+.fixture-teams span {
+  align-items: center;
+  background: rgba(244, 201, 93, 0.2);
+  border: 1px solid rgba(244, 201, 93, 0.45);
+  border-radius: 999px;
+  color: #f4c95d;
+  display: flex;
+  font-weight: 900;
+  height: 44px;
+  justify-content: center;
+}
+
+.fixture-meta {
+  color: #cbd5e1;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.fixture-meta span {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.standings-table {
+  border-collapse: collapse;
+  color: #f8fafc;
+  min-width: 720px;
+  width: 100%;
+}
+
+.standings-table th,
+.standings-table td {
+  border-bottom: 1px solid rgba(244, 201, 93, 0.18);
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.standings-table th {
+  color: #f4c95d;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.standings-table td:first-child,
+.standings-table th:first-child {
+  text-align: left;
+}
+
+.standings-table td {
+  font-weight: 800;
+}
+
+.table-team-dot {
+  border-radius: 50%;
+  display: inline-block;
+  height: 11px;
+  margin-right: 8px;
+  vertical-align: -1px;
+  width: 11px;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     padding: 18px;
@@ -681,7 +789,15 @@ h2 {
     justify-content: flex-start;
   }
 
+  .section-actions {
+    justify-content: flex-start;
+  }
+
   .roster-list.showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .fixture-teams {
     grid-template-columns: 1fr;
   }
 
@@ -709,8 +825,13 @@ h2 {
   .player-panel,
   .draw-stage,
   .header-band button,
+  .member-home,
+  .member-message,
+  .member-teams:not(.printable-team-list),
   .result-panel .primary-button,
-  .result-panel .ghost-button {
+  .result-panel .ghost-button,
+  .section-actions,
+  .team-download {
     display: none;
   }
 
@@ -739,7 +860,8 @@ h2 {
   }
 
   .panel,
-  .result-panel {
+  .result-panel,
+  .member-teams {
     background: #ffffff;
     border: 0;
     box-shadow: none;
@@ -761,6 +883,20 @@ h2 {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .roster-list.showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .printable-team-list .roster-card {
+    display: none;
+  }
+
+  .printable-team-list .roster-card.print-target {
+    display: block;
+    margin: 0 auto;
+    max-width: 520px;
+  }
+
   .roster-card {
     background: #ffffff;
     border: 1px solid #cccccc;
@@ -780,5 +916,9 @@ h2 {
 
   .empty-state {
     color: #555555;
+  }
+
+  .team-logo {
+    height: 140px;
   }
 }

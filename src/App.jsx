@@ -12,6 +12,13 @@ const fallbackTeams = [
 ]
 
 const teamLogoById = Object.fromEntries(fallbackTeams.map((team) => [team.id, team.logo]))
+const leagueTable = [
+  { teamId: 'wisdom', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
+  { teamId: 'star', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
+  { teamId: 'tower', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
+  { teamId: 'mirror', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
+]
+
 const finalTeamPlayers = {
   wisdom: [
     'Afam',
@@ -112,6 +119,7 @@ function App() {
   const [loginMode, setLoginMode] = useState('member')
   const [loginError, setLoginError] = useState('')
   const [memberView, setMemberView] = useState('home')
+  const [printTeamId, setPrintTeamId] = useState('')
   const isAdmin = role === 'admin'
   const isLoggedIn = role === 'admin' || role === 'member'
 
@@ -236,7 +244,24 @@ function App() {
     setMemberView('home')
   }
 
-  function exportTeamList() {
+  useEffect(() => {
+    function clearPrintTeam() {
+      setPrintTeamId('')
+    }
+
+    window.addEventListener('afterprint', clearPrintTeam)
+
+    return () => {
+      window.removeEventListener('afterprint', clearPrintTeam)
+    }
+  }, [])
+
+  function exportTeamList(teamId = '') {
+    setPrintTeamId(teamId)
+    window.setTimeout(() => window.print(), 0)
+  }
+
+  function exportAllTeamLists() {
     window.print()
   }
 
@@ -260,7 +285,11 @@ function App() {
     return (
       <div className={`roster-list ${variant === 'showcase' ? 'showcase' : ''}`}>
         {teamRosters.map((team) => (
-          <div className="roster-card" key={team.id} style={{ '--team-color': team.color }}>
+          <div
+            className={`roster-card ${printTeamId === team.id ? 'print-target' : ''}`}
+            key={team.id}
+            style={{ '--team-color': team.color }}
+          >
             <div className="roster-title">
               <i></i>
               <strong>{team.name}</strong>
@@ -279,6 +308,11 @@ function App() {
                   <li key={`${assignment.player}-${team.id}-${index}`}>{assignment.player}</li>
                 ))}
               </ol>
+            )}
+            {variant === 'showcase' && (
+              <button className="ghost-button full team-download" type="button" onClick={() => exportTeamList(team.id)}>
+                Download PDF
+              </button>
             )}
           </div>
         ))}
@@ -366,6 +400,12 @@ function App() {
               <button className="ghost-button" type="button" onClick={() => setMemberView('teams')}>
                 View team list
               </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('fixtures')}>
+                View fixtures
+              </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('table')}>
+                Match results
+              </button>
             </div>
           </section>
         )}
@@ -382,19 +422,84 @@ function App() {
         )}
 
         {memberView === 'teams' && (
-          <section className="member-teams">
+          <section className="member-teams printable-team-list">
             <div className="member-section-header">
               <div>
                 <p className="eyebrow">Team Rosters</p>
                 <h2>Full team list</h2>
               </div>
-              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
-                Back
-              </button>
+              <div className="section-actions">
+                <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                  Back
+                </button>
+              </div>
             </div>
             <TeamRosterList variant="showcase" />
           </section>
         )}
+
+        {memberView === 'fixtures' && (
+          <section className="member-message">
+            <p className="eyebrow">Fixtures</p>
+            <h2>Fixtures are not yet ready.</h2>
+            <p>The match schedule will be published here once it is available.</p>
+            <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+              Back
+            </button>
+          </section>
+        )}
+
+        {memberView === 'table' && (
+          <section className="member-teams">
+            <div className="member-section-header">
+              <div>
+                <p className="eyebrow">Match Results</p>
+                <h2>League standings</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                Back
+              </button>
+            </div>
+            <div className="table-wrap">
+              <table className="standings-table">
+                <thead>
+                  <tr>
+                    <th>Team</th>
+                    <th>P</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>GF</th>
+                    <th>GA</th>
+                    <th>Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leagueTable.map((row) => {
+                    const team = teamById[row.teamId]
+
+                    return (
+                      <tr key={row.teamId}>
+                        <td>
+                          <span className="table-team-dot" style={{ background: team.color }}></span>
+                          {team.name}
+                        </td>
+                        <td>{row.played}</td>
+                        <td>{row.won}</td>
+                        <td>{row.drawn}</td>
+                        <td>{row.lost}</td>
+                        <td>{row.goalsFor}</td>
+                        <td>{row.goalsAgainst}</td>
+                        <td>{row.points}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
       </main>
     )
   }
@@ -524,7 +629,7 @@ function App() {
           <button
             className="ghost-button full export-button"
             type="button"
-            onClick={exportTeamList}
+            onClick={exportAllTeamLists}
             disabled={assignments.length === 0}
           >
             Export team list PDF
