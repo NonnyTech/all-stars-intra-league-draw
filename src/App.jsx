@@ -147,11 +147,16 @@ function App() {
   const currentPlayerName = players[currentPlayerIndex]?.trim()
   const isGroupComplete = currentGroupAssignments.length === normalizedTeams.length
   const canSpin = isAdmin && Boolean(currentPlayerName) && remainingTeams.length > 0 && !isSpinning
-  const displayAssignments = assignments.length > 0 ? assignments : buildFinalAssignments()
-  const teamRosters = normalizedTeams.map((team) => ({
+  const finalAssignments = buildFinalAssignments()
+  const liveTeamRosters = normalizedTeams.map((team) => ({
     ...team,
-    players: displayAssignments.filter((assignment) => assignment.team.id === team.id),
+    players: assignments.filter((assignment) => assignment.team.id === team.id),
   }))
+  const finalTeamRosters = normalizedTeams.map((team) => ({
+    ...team,
+    players: finalAssignments.filter((assignment) => assignment.team.id === team.id),
+  }))
+  const teamRosters = isAdmin ? liveTeamRosters : finalTeamRosters
 
   useEffect(() => {
     function handleConnect() {

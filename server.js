@@ -33,7 +33,7 @@ const FINAL_TEAM_PLAYERS = {
     'Monday',
     'Pius',
     'Okekpe',
-    'Stanley Ugwu',
+    'Stanley Njoku',
     'Jerome',
     'Princewill',
     'Dickson',
