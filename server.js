@@ -88,11 +88,11 @@ const FINAL_TEAM_PLAYERS = {
     'Emma Anyanwu',
     'Hyginus',
     'Chisom',
+    'Charles Onochie',
     'Sunday Okoro',
     'Oti',
     'Hilary nsofor',
     'Onwa',
-    'Ben Haul',
   ],
 }
 
