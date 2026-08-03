@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { jsPDF } from 'jspdf'
 import { io } from 'socket.io-client'
 import './App.css'
 
@@ -119,7 +120,6 @@ function App() {
   const [loginMode, setLoginMode] = useState('member')
   const [loginError, setLoginError] = useState('')
   const [memberView, setMemberView] = useState('home')
-  const [printTeamId, setPrintTeamId] = useState('')
   const isAdmin = role === 'admin'
   const isLoggedIn = role === 'admin' || role === 'member'
 
@@ -249,25 +249,109 @@ function App() {
     setMemberView('home')
   }
 
-  useEffect(() => {
-    function clearPrintTeam() {
-      setPrintTeamId('')
-    }
+  async function imageToDataUrl(url) {
+    const response = await fetch(url)
+    const blob = await response.blob()
 
-    window.addEventListener('afterprint', clearPrintTeam)
-
-    return () => {
-      window.removeEventListener('afterprint', clearPrintTeam)
-    }
-  }, [])
-
-  function exportTeamList(teamId = '') {
-    setPrintTeamId(teamId)
-    window.setTimeout(() => window.print(), 0)
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    })
   }
 
-  function exportAllTeamLists() {
-    window.print()
+  async function exportTeamList(team) {
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const margin = 42
+    const teamRgb = hexToRgb(team.color)
+
+    pdf.setFillColor(6, 43, 29)
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+    pdf.setDrawColor(244, 201, 93)
+    pdf.setLineWidth(1.4)
+    pdf.roundedRect(24, 24, pageWidth - 48, pageHeight - 48, 8, 8)
+
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(12)
+    pdf.setTextColor(244, 201, 93)
+    pdf.text('ALL STARS INTRA LEAGUE', pageWidth / 2, 58, { align: 'center' })
+
+    pdf.setFontSize(28)
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('2026 All Stars League', pageWidth / 2, 94, { align: 'center' })
+
+    pdf.setFillColor(teamRgb.r, teamRgb.g, teamRgb.b)
+    pdf.roundedRect(margin, 120, pageWidth - margin * 2, 54, 6, 6, 'F')
+    pdf.setFontSize(22)
+    pdf.setTextColor(team.id === 'star' ? 255 : 7, team.id === 'star' ? 255 : 27, team.id === 'star' ? 255 : 18)
+    pdf.text(team.name, pageWidth / 2, 154, { align: 'center' })
+
+    if (team.logo) {
+      try {
+        const logo = await imageToDataUrl(team.logo)
+        pdf.setFillColor(255, 255, 255)
+        pdf.roundedRect(pageWidth / 2 - 92, 196, 184, 184, 8, 8, 'F')
+        pdf.addImage(logo, 'JPEG', pageWidth / 2 - 76, 210, 152, 152)
+      } catch {
+        // Keep the PDF downloadable even if the browser cannot read the image.
+      }
+    }
+
+    const rosterTop = 410
+    pdf.setFillColor(255, 255, 255)
+    pdf.roundedRect(margin, rosterTop, pageWidth - margin * 2, 330, 8, 8, 'F')
+
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(15)
+    pdf.setTextColor(17, 24, 39)
+    pdf.text(`Players (${team.players.length})`, margin + 24, rosterTop + 34)
+
+    pdf.setDrawColor(teamRgb.r, teamRgb.g, teamRgb.b)
+    pdf.setLineWidth(2)
+    pdf.line(margin + 24, rosterTop + 48, pageWidth - margin - 24, rosterTop + 48)
+
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(12.5)
+    pdf.setTextColor(17, 24, 39)
+
+    const firstColumnX = margin + 28
+    const secondColumnX = pageWidth / 2 + 8
+    let leftY = rosterTop + 78
+    let rightY = rosterTop + 78
+
+    team.players.forEach((assignment, index) => {
+      const x = index < 8 ? firstColumnX : secondColumnX
+      const currentY = index < 8 ? leftY : rightY
+      pdf.text(`${index + 1}. ${assignment.player}`, x, currentY)
+
+      if (index < 8) {
+        leftY += 28
+      } else {
+        rightY += 28
+      }
+    })
+
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(10)
+    pdf.setTextColor(244, 201, 93)
+    pdf.text('Generated from the 2026 All Stars League portal', pageWidth / 2, pageHeight - 48, {
+      align: 'center',
+    })
+
+    pdf.save(`${team.name.toLowerCase().replaceAll(' ', '-')}-team-list.pdf`)
+  }
+
+  function hexToRgb(hex) {
+    const value = hex.replace('#', '')
+    const numericValue = Number.parseInt(value, 16)
+
+    return {
+      r: (numericValue >> 16) & 255,
+      g: (numericValue >> 8) & 255,
+      b: numericValue & 255,
+    }
   }
 
   function teamInitials(teamName) {
@@ -290,11 +374,7 @@ function App() {
     return (
       <div className={`roster-list ${variant === 'showcase' ? 'showcase' : ''}`}>
         {teamRosters.map((team) => (
-          <div
-            className={`roster-card ${printTeamId === team.id ? 'print-target' : ''}`}
-            key={team.id}
-            style={{ '--team-color': team.color }}
-          >
+          <div className="roster-card" key={team.id} style={{ '--team-color': team.color }}>
             <div className="roster-title">
               <i></i>
               <strong>{team.name}</strong>
@@ -315,7 +395,7 @@ function App() {
               </ol>
             )}
             {variant === 'showcase' && (
-              <button className="ghost-button full team-download" type="button" onClick={() => exportTeamList(team.id)}>
+              <button className="ghost-button full team-download" type="button" onClick={() => exportTeamList(team)}>
                 Download PDF
               </button>
             )}
@@ -634,7 +714,7 @@ function App() {
           <button
             className="ghost-button full export-button"
             type="button"
-            onClick={exportAllTeamLists}
+            onClick={() => window.print()}
             disabled={assignments.length === 0}
           >
             Export team list PDF

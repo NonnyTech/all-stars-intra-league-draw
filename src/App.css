@@ -887,16 +887,6 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .printable-team-list .roster-card {
-    display: none;
-  }
-
-  .printable-team-list .roster-card.print-target {
-    display: block;
-    margin: 0 auto;
-    max-width: 520px;
-  }
-
   .roster-card {
     background: #ffffff;
     border: 1px solid #cccccc;
