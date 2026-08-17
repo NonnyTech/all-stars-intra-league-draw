@@ -45,10 +45,10 @@ const FINAL_TEAM_PLAYERS = {
   ],
   star: [
     'Obinna',
-    'Emeka Eke',
+    'Emeka Ekediegwu   (C)',
     'Erike',
     'Nonny',
-    'Barristrs',
+    'Barrister',
     'Stanley Ugwu',
     'Uche oriaku',
     'Obiorah Ani',
@@ -56,12 +56,13 @@ const FINAL_TEAM_PLAYERS = {
     'Tobby Ekwueme',
     'Bernard',
     'Nelson',
-    'Beer Nwaru',
+    'Bert Nwaru',
     'Austine Adeyemi',
     'Austine Chukwu',
+    'Amaechi Dominic (GK)',
   ],
   tower: [
-    'Inzaghi',
+    'Inzaghi   (C)',
     'Anyanwu U',
     'Miracle',
     'Yemi',
@@ -76,6 +77,7 @@ const FINAL_TEAM_PLAYERS = {
     'Chief Emeruwa',
     'Ifeanyi Ebieye',
     'Remi Agim',
+    'Kenneth Okechukwu   (GK)'
   ],
   mirror: [
     'Martins',

@@ -40,7 +40,7 @@ const finalTeamPlayers = {
   ],
   star: [
     'Obinna',
-    'Emeka Ekediegwu',
+    'Emeka Ekediegwu   (C)',
     'Erike',
     'Nonny',
     'Barrister',
@@ -54,9 +54,10 @@ const finalTeamPlayers = {
     'Bert Nwaru',
     'Austine Adeyemi',
     'Austine Chukwu',
+    'Amaechi Dominic   (GK)',
   ],
   tower: [
-    'Inzaghi',
+    'Inzaghi   (C)',
     'Anyanwu U',
     'Miracle',
     'Yemi',
@@ -71,6 +72,7 @@ const finalTeamPlayers = {
     'Chief Emeruwa',
     'Ifeanyi Ebieye',
     'Remi Agim',
+    'Kenneth Okechukwu   (GK)'
   ],
   mirror: [
     'Martins',
@@ -324,7 +326,19 @@ function App() {
     team.players.forEach((assignment, index) => {
       const x = index < 8 ? firstColumnX : secondColumnX
       const currentY = index < 8 ? leftY : rightY
-      pdf.text(`${index + 1}. ${assignment.player}`, x, currentY)
+      const player = parsePlayerRole(assignment.player)
+
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(`${index + 1}.`, x, currentY)
+
+      if (player.role) {
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(`${player.role} -`, x + 24, currentY)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(player.name, x + 66, currentY)
+      } else {
+        pdf.text(player.name, x + 24, currentY)
+      }
 
       if (index < 8) {
         leftY += 28
@@ -352,6 +366,18 @@ function App() {
       g: (numericValue >> 8) & 255,
       b: numericValue & 255,
     }
+  }
+
+  function parsePlayerRole(playerName) {
+    if (playerName.startsWith('GK ')) {
+      return { role: 'GK', name: playerName.replace('GK ', '') }
+    }
+
+    if (playerName.startsWith('C ')) {
+      return { role: 'C', name: playerName.replace('C ', '') }
+    }
+
+    return { role: '', name: playerName }
   }
 
   function teamInitials(teamName) {
@@ -390,7 +416,12 @@ function App() {
             ) : (
               <ol>
                 {team.players.map((assignment, index) => (
-                  <li key={`${assignment.player}-${team.id}-${index}`}>{assignment.player}</li>
+                  <li key={`${assignment.player}-${team.id}-${index}`}>
+                    {parsePlayerRole(assignment.player).role && (
+                      <strong className="player-role">{parsePlayerRole(assignment.player).role} -</strong>
+                    )}
+                    <span>{parsePlayerRole(assignment.player).name}</span>
+                  </li>
                 ))}
               </ol>
             )}

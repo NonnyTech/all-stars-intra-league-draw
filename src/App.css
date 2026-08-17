@@ -617,9 +617,18 @@ h2 {
 }
 
 .roster-card li {
+  align-items: baseline;
+  display: flex;
+  gap: 7px;
   font-weight: 800;
   margin-top: 6px;
   overflow-wrap: anywhere;
+}
+
+.player-role {
+  color: #f4c95d;
+  flex: 0 0 auto;
+  font-weight: 900;
 }
 
 .team-logo {
