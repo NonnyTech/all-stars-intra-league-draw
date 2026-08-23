@@ -30,7 +30,7 @@ const FINAL_TEAM_PLAYERS = {
     'Afam',
     'Victor',
     'Solar',
-    'Monday',
+    'Monday  (C)',
     'Pius',
     'Okekpe',
     'Stanley Njoku',
@@ -42,6 +42,7 @@ const FINAL_TEAM_PLAYERS = {
     'Cosmos',
     'David Omana',
     'Arinze Ugboeke',
+    'Kizito Ugbeda  (GK)',
   ],
   star: [
     'Obinna',
@@ -84,7 +85,7 @@ const FINAL_TEAM_PLAYERS = {
     'Adebayo philip',
     'Collins',
     'Michael',
-    'Nonso Ike',
+    'Nonso Ike  (C)',
     'Nwakanobi',
     'Henry ike',
     'Emma Anyanwu',
@@ -95,6 +96,7 @@ const FINAL_TEAM_PLAYERS = {
     'Oti',
     'Hilary nsofor',
     'Onwa',
+    'Ogar Friday  (GK)',
   ],
 }
 
