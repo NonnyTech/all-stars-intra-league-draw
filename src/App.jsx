@@ -20,6 +20,61 @@ const leagueTable = [
   { teamId: 'mirror', played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
 ]
 
+const fixtures = [
+  {
+    date: '12 Sept 2026',
+    matches: [
+      { time: '8:45 AM', homeTeamId: 'wisdom', awayTeamId: 'mirror' },
+      { time: '10:00 AM', homeTeamId: 'tower', awayTeamId: 'star' },
+    ],
+  },
+  {
+    date: '19 Sept 2026',
+    matches: [
+      { time: '8:45 AM', homeTeamId: 'mirror', awayTeamId: 'star' },
+      { time: '10:00 AM', homeTeamId: 'tower', awayTeamId: 'wisdom' },
+    ],
+  },
+  {
+    date: '26 Sept 2026',
+    matches: [
+      { time: '10:15 AM', homeTeamId: 'wisdom', awayTeamId: 'star' },
+      { time: '11:30 AM', homeTeamId: 'mirror', awayTeamId: 'tower' },
+    ],
+  },
+  {
+    date: '1 Oct 2026',
+    matches: [
+      { time: '8:45 AM', homeTeamId: 'star', awayTeamId: 'tower' },
+      { time: '10:00 AM', homeTeamId: 'mirror', awayTeamId: 'wisdom' },
+    ],
+  },
+  {
+    date: '3 Oct 2026',
+    matches: [
+      { time: '8:45 AM', homeTeamId: 'wisdom', awayTeamId: 'tower' },
+      { time: '10:00 AM', homeTeamId: 'star', awayTeamId: 'mirror' },
+    ],
+  },
+  {
+    date: '10 Oct 2026',
+    matches: [
+      { time: '8:45 AM', homeTeamId: 'tower', awayTeamId: 'mirror' },
+      { time: '10:00 AM', homeTeamId: 'star', awayTeamId: 'wisdom' },
+    ],
+  },
+]
+
+function flattenFixtureGroups(fixtureGroups) {
+  return fixtureGroups.flatMap((fixtureGroup) =>
+    fixtureGroup.matches.map((match) => ({
+      ...match,
+      date: fixtureGroup.date,
+      id: `${fixtureGroup.date}-${match.time}-${match.homeTeamId}-${match.awayTeamId}`,
+    })),
+  )
+}
+
 const finalTeamPlayers = {
   wisdom: [
     'Afam',
@@ -114,6 +169,19 @@ const initialState = {
   remainingTeams: fallbackTeams,
   rotation: 0,
   teams: fallbackTeams,
+  completedResults: [],
+  fixtures: flattenFixtureGroups(fixtures),
+  leagueTable,
+  matchState: {
+    fixtureId: '2026-09-12-0845-wisdom-mirror',
+    homeTeamId: 'wisdom',
+    awayTeamId: 'mirror',
+    homeScore: 0,
+    awayScore: 0,
+    status: 'Not started',
+    minute: '',
+    events: [],
+  },
 }
 
 function App() {
@@ -124,6 +192,7 @@ function App() {
   const [loginMode, setLoginMode] = useState('member')
   const [loginError, setLoginError] = useState('')
   const [memberView, setMemberView] = useState('home')
+  const [adminView, setAdminView] = useState('dashboard')
   const isAdmin = role === 'admin'
   const isLoggedIn = role === 'admin' || role === 'member'
 
@@ -137,6 +206,10 @@ function App() {
     remainingTeams,
     rotation,
     teams,
+    completedResults = [],
+    fixtures: matchFixtures = initialState.fixtures,
+    leagueTable: currentLeagueTable = leagueTable,
+    matchState = initialState.matchState,
   } = drawState
 
   const normalizedTeams = teams.map((team) => ({
@@ -161,6 +234,8 @@ function App() {
     players: finalAssignments.filter((assignment) => assignment.team.id === team.id),
   }))
   const teamRosters = isAdmin ? liveTeamRosters : finalTeamRosters
+  const activeFixtures = matchFixtures.length > 0 ? matchFixtures : initialState.fixtures
+  const displayedLeagueTable = currentLeagueTable.length > 0 ? currentLeagueTable : leagueTable
 
   useEffect(() => {
     function handleConnect() {
@@ -215,6 +290,7 @@ function App() {
       if (response?.ok) {
         setRole(attemptedMode)
         setMemberView('home')
+        setAdminView('dashboard')
         setPassword('')
         return
       }
@@ -251,6 +327,27 @@ function App() {
     setLoginError('')
     setLoginMode('member')
     setMemberView('home')
+    setAdminView('dashboard')
+  }
+
+  function updateMatch(nextMatchState) {
+    socket.emit('update-match', nextMatchState)
+  }
+
+  function addMatchEvent(event) {
+    socket.emit('add-match-event', event)
+  }
+
+  function deleteMatchEvent(eventId) {
+    socket.emit('delete-match-event', eventId)
+  }
+
+  function resetLiveMatch() {
+    socket.emit('reset-live-match')
+  }
+
+  function saveMatchResult() {
+    socket.emit('save-match-result')
   }
 
   async function imageToDataUrl(url) {
@@ -371,15 +468,33 @@ function App() {
   }
 
   function parsePlayerRole(playerName) {
-    if (playerName.startsWith('GK ')) {
-      return { role: 'GK', name: playerName.replace('GK ', '') }
+    const normalizedName = playerName.replace(/\s+/g, ' ').trim()
+
+    if (/\(GK\)$/i.test(normalizedName)) {
+      return { role: 'GK', name: normalizedName.replace(/\s*\(GK\)$/i, '').trim() }
     }
 
-    if (playerName.startsWith('C ')) {
-      return { role: 'C', name: playerName.replace('C ', '') }
+    if (/\(C\)$/i.test(normalizedName)) {
+      return { role: 'C', name: normalizedName.replace(/\s*\(C\)$/i, '').trim() }
     }
 
-    return { role: '', name: playerName }
+    if (/ GK$/i.test(normalizedName)) {
+      return { role: 'GK', name: normalizedName.replace(/\s+GK$/i, '').trim() }
+    }
+
+    if (/ C$/i.test(normalizedName)) {
+      return { role: 'C', name: normalizedName.replace(/\s+C$/i, '').trim() }
+    }
+
+    if (/^GK /i.test(normalizedName)) {
+      return { role: 'GK', name: normalizedName.replace(/^GK\s+/i, '').trim() }
+    }
+
+    if (/^C /i.test(normalizedName)) {
+      return { role: 'C', name: normalizedName.replace(/^C\s+/i, '').trim() }
+    }
+
+    return { role: '', name: normalizedName }
   }
 
   function teamInitials(teamName) {
@@ -396,6 +511,246 @@ function App() {
     }
 
     return <span>{teamInitials(team.name)}</span>
+  }
+
+  function FixtureLogo({ team }) {
+    if (team.logo) {
+      return <img className="fixture-logo" src={team.logo} alt="" />
+    }
+
+    return <span className="fixture-logo initials">{teamInitials(team.name)}</span>
+  }
+
+  function getTeamPlayers(teamId) {
+    return finalTeamRosters.find((team) => team.id === teamId)?.players ?? []
+  }
+
+  function LiveMatchView({ admin = false }) {
+    const homeTeam = teamById[matchState.homeTeamId] ?? normalizedTeams[0]
+    const awayTeam = teamById[matchState.awayTeamId] ?? normalizedTeams[1]
+    const selectedFixture =
+      activeFixtures.find((fixture) => fixture.id === matchState.fixtureId) ??
+      activeFixtures.find(
+        (fixture) => fixture.homeTeamId === matchState.homeTeamId && fixture.awayTeamId === matchState.awayTeamId,
+      )
+    const matchTeams = [homeTeam, awayTeam]
+    const [eventForm, setEventForm] = useState({
+      assist: '',
+      minute: '',
+      note: '',
+      scorer: '',
+      teamId: matchState.homeTeamId,
+      type: 'Goal',
+    })
+    const selectedTeamPlayers = getTeamPlayers(eventForm.teamId)
+
+    function submitMatchEvent(event) {
+      event.preventDefault()
+      addMatchEvent(eventForm)
+      setEventForm({
+        assist: '',
+        minute: '',
+        note: '',
+        scorer: '',
+        teamId: matchState.homeTeamId,
+        type: 'Goal',
+      })
+    }
+
+    return (
+      <section className="member-teams live-match-panel">
+        <div className="member-section-header">
+          <div>
+            <p className="eyebrow">Live Match</p>
+            <h2>Scoreboard</h2>
+          </div>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => (admin ? setAdminView('dashboard') : setMemberView('home'))}
+          >
+            Back
+          </button>
+        </div>
+
+        <div className="scoreboard">
+          <div className="score-team">
+            <FixtureLogo team={homeTeam} />
+            <strong>{homeTeam.name}</strong>
+          </div>
+          <div className="score-main">
+            <span>{matchState.status}</span>
+            <strong>
+              {matchState.homeScore} - {matchState.awayScore}
+            </strong>
+            <em>{matchState.minute || 'Time not set'}</em>
+          </div>
+          <div className="score-team">
+            <FixtureLogo team={awayTeam} />
+            <strong>{awayTeam.name}</strong>
+          </div>
+        </div>
+
+        {admin && (
+          <div className="match-admin-card">
+            <div className="match-admin-grid">
+              <label className="wide-field">
+                <span>Current fixture</span>
+                <select
+                  value={selectedFixture?.id ?? matchState.fixtureId}
+                  onChange={(event) => updateMatch({ fixtureId: event.target.value })}
+                >
+                  {activeFixtures.map((fixture) => (
+                    <option key={fixture.id} value={fixture.id}>
+                      {fixture.date} {fixture.time} - {teamById[fixture.homeTeamId]?.name} vs{' '}
+                      {teamById[fixture.awayTeamId]?.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Status</span>
+                <select value={matchState.status} onChange={(event) => updateMatch({ status: event.target.value })}>
+                  <option>Not started</option>
+                  <option>First half</option>
+                  <option>Half time</option>
+                  <option>Second half</option>
+                  <option>Full time</option>
+                </select>
+              </label>
+              <label>
+                <span>Home score</span>
+                <input
+                  min="0"
+                  type="number"
+                  value={matchState.homeScore}
+                  onChange={(event) => updateMatch({ homeScore: Number(event.target.value) })}
+                />
+              </label>
+              <label>
+                <span>Away score</span>
+                <input
+                  min="0"
+                  type="number"
+                  value={matchState.awayScore}
+                  onChange={(event) => updateMatch({ awayScore: Number(event.target.value) })}
+                />
+              </label>
+              <label>
+                <span>Minute</span>
+                <input
+                  value={matchState.minute}
+                  onChange={(event) => updateMatch({ minute: event.target.value })}
+                  placeholder="45+1'"
+                />
+              </label>
+            </div>
+
+            <div className="match-quick-actions">
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'First half', minute: "1'" })}>
+                Start match
+              </button>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Half time', minute: "45'" })}>
+                Half time
+              </button>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Second half', minute: "46'" })}>
+                Second half
+              </button>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Full time', minute: "90'" })}>
+                Full time
+              </button>
+              <button className="primary-button compact-button" type="button" onClick={saveMatchResult}>
+                Save result
+              </button>
+              <button className="ghost-button compact-button" type="button" onClick={resetLiveMatch}>
+                Reset live match
+              </button>
+            </div>
+
+            <form className="match-event-form" onSubmit={submitMatchEvent}>
+              <input
+                value={eventForm.minute}
+                onChange={(event) => setEventForm({ ...eventForm, minute: event.target.value })}
+                placeholder="Min"
+              />
+              <select
+                value={eventForm.teamId}
+                onChange={(event) =>
+                  setEventForm({ ...eventForm, assist: '', scorer: '', teamId: event.target.value })
+                }
+              >
+                {matchTeams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={eventForm.scorer}
+                onChange={(event) => setEventForm({ ...eventForm, scorer: event.target.value })}
+              >
+                <option value="">Scorer</option>
+                {selectedTeamPlayers.map((assignment) => (
+                  <option key={assignment.player} value={parsePlayerRole(assignment.player).name}>
+                    {parsePlayerRole(assignment.player).name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={eventForm.assist}
+                onChange={(event) => setEventForm({ ...eventForm, assist: event.target.value })}
+              >
+                <option value="">Assist</option>
+                <option value="No assist">No assist</option>
+                {selectedTeamPlayers.map((assignment) => (
+                  <option key={assignment.player} value={parsePlayerRole(assignment.player).name}>
+                    {parsePlayerRole(assignment.player).name}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={eventForm.note}
+                onChange={(event) => setEventForm({ ...eventForm, note: event.target.value })}
+                placeholder="Other update"
+              />
+              <button className="primary-button" type="submit">
+                Add update
+              </button>
+            </form>
+          </div>
+        )}
+
+        <div className="match-events">
+          <div className="panel-heading">
+            <h2>Match updates</h2>
+            <span>{matchState.events.length} updates</span>
+          </div>
+          <div className="event-list">
+            {matchState.events.length === 0 && <p className="empty-state">No match update yet.</p>}
+            {matchState.events.map((event) => {
+              const eventTeam = teamById[event.teamId]
+
+              return (
+                <div className="event-card" key={event.id}>
+                  <strong>{event.minute || '--'}</strong>
+                  <div>
+                    <span>{eventTeam?.name}</span>
+                    {event.scorer && <p>Goal: {event.scorer}</p>}
+                    {event.assist && <p>Assist: {event.assist}</p>}
+                    {event.note && <p>{event.note}</p>}
+                  </div>
+                  {admin && (
+                    <button className="ghost-button" type="button" onClick={() => deleteMatchEvent(event.id)}>
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+    )
   }
 
   function TeamRosterList({ variant = 'compact' }) {
@@ -524,6 +879,9 @@ function App() {
               <button className="ghost-button" type="button" onClick={() => setMemberView('table')}>
                 Match results
               </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('live')}>
+                Watch live match
+              </button>
             </div>
           </section>
         )}
@@ -557,13 +915,45 @@ function App() {
         )}
 
         {memberView === 'fixtures' && (
-          <section className="member-message">
-            <p className="eyebrow">Fixtures</p>
-            <h2>Fixtures are not yet ready.</h2>
-            <p>The match schedule will be published here once it is available.</p>
-            <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
-              Back
-            </button>
+          <section className="member-teams">
+            <div className="member-section-header">
+              <div>
+                <p className="eyebrow">Fixtures</p>
+                <h2>Upcoming matches</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                Back
+              </button>
+            </div>
+
+            <div className="fixture-list">
+              {fixtures.map((fixtureGroup) => (
+                <div className="fixture-day" key={fixtureGroup.date}>
+                  <h3>{fixtureGroup.date}</h3>
+                  {fixtureGroup.matches.map((fixture) => {
+                    const homeTeam = teamById[fixture.homeTeamId]
+                    const awayTeam = teamById[fixture.awayTeamId]
+
+                    return (
+                      <div className="fixture-card" key={`${fixtureGroup.date}-${fixture.time}`}>
+                        <div className="fixture-time">{fixture.time}</div>
+                        <div className="fixture-line">
+                          <div className="fixture-team">
+                            <FixtureLogo team={homeTeam} />
+                            <strong>{homeTeam.name}</strong>
+                          </div>
+                          <span className="fixture-vs">vs</span>
+                          <div className="fixture-team">
+                            <FixtureLogo team={awayTeam} />
+                            <strong>{awayTeam.name}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
@@ -589,12 +979,13 @@ function App() {
                     <th>L</th>
                     <th>GF</th>
                     <th>GA</th>
+                    <th>GD</th>
                     <th>Pts</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leagueTable.map((row) => {
-                    const team = teamById[row.teamId]
+                  {displayedLeagueTable.map((row) => {
+                    const team = teamById[row.teamId] ?? normalizedTeams.find((item) => item.id === row.teamId)
 
                     return (
                       <tr key={row.teamId}>
@@ -608,6 +999,7 @@ function App() {
                         <td>{row.lost}</td>
                         <td>{row.goalsFor}</td>
                         <td>{row.goalsAgainst}</td>
+                        <td>{row.goalDifference}</td>
                         <td>{row.points}</td>
                       </tr>
                     )
@@ -615,8 +1007,31 @@ function App() {
                 </tbody>
               </table>
             </div>
+            <div className="result-history">
+              <div className="panel-heading">
+                <h2>Full-time results</h2>
+                <span>{completedResults.length} saved</span>
+              </div>
+              {completedResults.length === 0 ? (
+                <p className="empty-state">No completed match result yet.</p>
+              ) : (
+                <div className="result-list">
+                  {completedResults.map((result) => (
+                    <div className="result-card" key={result.id}>
+                      <span>{result.date} - {result.time}</span>
+                      <strong>
+                        {teamById[result.homeTeamId]?.name} {result.homeScore} - {result.awayScore}{' '}
+                        {teamById[result.awayTeamId]?.name}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         )}
+
+        {memberView === 'live' && <LiveMatchView />}
 
       </main>
     )
@@ -641,12 +1056,20 @@ function App() {
               Reset tournament
             </button>
           )}
+          {adminView === 'dashboard' && (
+            <button className="ghost-button" type="button" onClick={() => setAdminView('live')}>
+              Live match
+            </button>
+          )}
           <button className="ghost-button" type="button" onClick={logout}>
             Logout
           </button>
         </div>
       </section>
 
+      {adminView === 'live' ? (
+        <LiveMatchView admin />
+      ) : (
       <section className="workspace">
         <aside className="panel player-panel" aria-label="Seeded player names">
           <div className="panel-heading">
@@ -754,6 +1177,7 @@ function App() {
           </button>
         </aside>
       </section>
+      )}
     </main>
   )
 }

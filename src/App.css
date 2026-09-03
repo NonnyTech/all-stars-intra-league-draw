@@ -664,40 +664,107 @@ h2 {
 
 .fixture-list {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
-.fixture-card {
+.fixture-day {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  padding: 18px;
+  overflow: hidden;
 }
 
-.fixture-teams {
+.fixture-day h3 {
+  background: rgba(3, 20, 39, 0.72);
+  border-bottom: 1px solid rgba(244, 201, 93, 0.22);
+  color: #ffffff;
+  font-size: clamp(20px, 3vw, 30px);
+  margin: 0;
+  padding: 12px 18px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.fixture-card {
   align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(7, 27, 18, 0.18);
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  gap: 16px;
+  grid-template-columns: 105px minmax(0, 1fr);
+  padding: 12px 14px;
+}
+
+.fixture-card:last-child {
+  border-bottom: 0;
+}
+
+.fixture-time {
+  align-items: center;
+  background: #f4c95d;
+  border-radius: 6px;
+  color: #071b12;
+  display: flex;
+  font-size: 17px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 46px;
   text-align: center;
 }
 
-.fixture-teams strong {
-  color: #ffffff;
-  font-size: clamp(18px, 3vw, 28px);
-  overflow-wrap: anywhere;
+.fixture-line {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
 }
 
-.fixture-teams span {
+.fixture-team {
   align-items: center;
-  background: rgba(244, 201, 93, 0.2);
-  border: 1px solid rgba(244, 201, 93, 0.45);
-  border-radius: 999px;
-  color: #f4c95d;
+  color: #071b12;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fixture-team strong {
+  font-size: clamp(15px, 2vw, 19px);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.fixture-logo {
+  background: #ffffff;
+  border: 1px solid rgba(7, 27, 18, 0.16);
+  border-radius: 6px;
+  flex: 0 0 34px;
+  height: 34px;
+  object-fit: contain;
+  padding: 2px;
+  width: 34px;
+}
+
+.fixture-logo.initials {
+  align-items: center;
+  color: #071b12;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  justify-content: center;
+}
+
+.fixture-vs {
+  align-items: center;
+  background: transparent;
+  border-radius: 0;
+  color: #071b12;
   display: flex;
   font-weight: 900;
-  height: 44px;
+  height: auto;
   justify-content: center;
+  text-transform: uppercase;
+  width: auto;
 }
 
 .fixture-meta {
@@ -759,6 +826,199 @@ h2 {
   width: 11px;
 }
 
+.live-match-panel {
+  margin-top: 18px;
+}
+
+.scoreboard {
+  align-items: stretch;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px) minmax(0, 1fr);
+}
+
+.score-team,
+.score-main,
+.match-admin-card,
+.match-events {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+
+.score-team,
+.score-main {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 150px;
+  padding: 14px;
+  text-align: center;
+}
+
+.score-team .fixture-logo {
+  flex-basis: 54px;
+  height: 54px;
+  margin-bottom: 10px;
+  width: 54px;
+}
+
+.score-team strong {
+  color: #ffffff;
+  font-size: clamp(17px, 2.6vw, 24px);
+  line-height: 1.1;
+}
+
+.score-main span,
+.score-main em {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.score-main strong {
+  color: #ffffff;
+  font-size: clamp(44px, 8vw, 72px);
+  line-height: 1;
+  margin: 10px 0;
+}
+
+.match-admin-card {
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.match-admin-grid,
+.match-event-form {
+  display: grid;
+  gap: 10px;
+}
+
+.match-admin-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.match-admin-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.match-admin-grid .wide-field {
+  grid-column: 1 / -1;
+}
+
+.match-admin-grid span {
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.match-admin-grid input,
+.match-admin-grid select,
+.match-event-form input,
+.match-event-form select {
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  color: #071b12;
+  font: inherit;
+  min-height: 42px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.match-event-form {
+  border-top: 1px solid rgba(244, 201, 93, 0.18);
+  grid-template-columns: 72px minmax(135px, 1fr) minmax(135px, 1fr) minmax(135px, 1fr) minmax(150px, 1fr) auto;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.match-quick-actions {
+  border-top: 1px solid rgba(244, 201, 93, 0.18);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.compact-button {
+  font-size: 13px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.match-events {
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+}
+
+.event-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.event-card > strong {
+  color: #f4c95d;
+  font-size: 18px;
+}
+
+.event-card span {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.event-card p {
+  color: #cbd5e1;
+  font-weight: 800;
+  margin: 4px 0 0;
+}
+
+.result-history {
+  margin-top: 18px;
+}
+
+.result-list {
+  display: grid;
+  gap: 10px;
+}
+
+.result-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.result-card span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.result-card strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     padding: 18px;
@@ -806,7 +1066,21 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .fixture-teams {
+  .fixture-card {
+    gap: 10px;
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .fixture-line {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .scoreboard,
+  .match-admin-grid,
+  .match-event-form,
+  .event-card {
     grid-template-columns: 1fr;
   }
 
