@@ -189,11 +189,15 @@ h2 {
 }
 
 .member-home {
-  align-items: center;
+  align-items: start;
   display: grid;
   gap: 22px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   min-height: 320px;
+}
+
+.member-home > div:first-child {
+  max-width: 760px;
 }
 
 .member-home h2,
@@ -206,12 +210,12 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .member-actions .primary-button,
 .member-actions .ghost-button {
-  min-width: 180px;
+  min-width: 190px;
 }
 
 .section-actions {
@@ -667,6 +671,16 @@ h2 {
   gap: 16px;
 }
 
+.fixture-section-title {
+  margin: 8px 0 12px;
+}
+
+.fixture-section-title.upcoming {
+  border-top: 1px solid rgba(244, 201, 93, 0.22);
+  margin-top: 24px;
+  padding-top: 18px;
+}
+
 .fixture-day {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -719,6 +733,12 @@ h2 {
   min-width: 0;
 }
 
+.fixture-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .fixture-team {
   align-items: center;
   color: #071b12;
@@ -765,6 +785,69 @@ h2 {
   justify-content: center;
   text-transform: uppercase;
   width: auto;
+}
+
+.fixture-vs.score {
+  background: #071b12;
+  border-radius: 999px;
+  color: #ffffff;
+  min-width: 72px;
+  padding: 8px 12px;
+}
+
+.fixture-card.completed {
+  background: #ffffff;
+}
+
+.fixture-result-summary {
+  color: #071b12;
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.fixture-result-summary strong {
+  background: rgba(244, 201, 93, 0.36);
+  border-radius: 999px;
+  color: #071b12;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.fixture-result-summary span {
+  background: rgba(7, 27, 18, 0.08);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+.match-scorers {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.match-scorers div {
+  align-content: flex-start;
+  background: rgba(7, 27, 18, 0.06);
+  border: 1px solid rgba(7, 27, 18, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.match-scorers b {
+  color: #071b12;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.match-scorers span {
+  background: transparent;
+  border-radius: 0;
+  color: #071b12;
+  padding: 0;
 }
 
 .fixture-meta {
@@ -933,7 +1016,7 @@ h2 {
 
 .match-event-form {
   border-top: 1px solid rgba(244, 201, 93, 0.18);
-  grid-template-columns: 72px minmax(135px, 1fr) minmax(135px, 1fr) minmax(135px, 1fr) minmax(150px, 1fr) auto;
+  grid-template-columns: 72px minmax(120px, 0.9fr) minmax(135px, 1fr) minmax(135px, 1fr) minmax(135px, 1fr) minmax(150px, 1fr) auto;
   margin-top: 14px;
   padding-top: 14px;
 }
@@ -1017,6 +1100,30 @@ h2 {
 .result-card strong {
   color: #ffffff;
   font-size: 16px;
+}
+
+.result-scorers {
+  margin-top: 4px;
+}
+
+.result-scorers em {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+
+.result-scorers.match-scorers div {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.result-scorers.match-scorers b,
+.result-scorers.match-scorers span {
+  color: #f8fafc;
 }
 
 @media (max-width: 980px) {

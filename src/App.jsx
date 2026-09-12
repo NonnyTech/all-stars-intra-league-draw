@@ -70,9 +70,21 @@ function flattenFixtureGroups(fixtureGroups) {
     fixtureGroup.matches.map((match) => ({
       ...match,
       date: fixtureGroup.date,
-      id: `${fixtureGroup.date}-${match.time}-${match.homeTeamId}-${match.awayTeamId}`,
+      id: fixtureIdFor(fixtureGroup.date, match.time, match.homeTeamId, match.awayTeamId),
     })),
   )
+}
+
+function fixtureIdFor(date, time, homeTeamId, awayTeamId) {
+  const normalizedDate = date
+    .replace('Sept', '09')
+    .replace('Oct', '10')
+    .replace(/\s+/g, '-')
+    .replace(/-2026$/, '')
+  const [day, month] = normalizedDate.split('-')
+  const normalizedTime = time.replace(':', '').replace(/\s+/g, '').replace(/[ap]m/i, '').padStart(4, '0')
+
+  return `2026-${month}-${day.padStart(2, '0')}-${normalizedTime}-${homeTeamId}-${awayTeamId}`
 }
 
 const finalTeamPlayers = {
@@ -525,6 +537,87 @@ function App() {
     return finalTeamRosters.find((team) => team.id === teamId)?.players ?? []
   }
 
+  function getFixtureResult(fixtureGroup, fixture) {
+    const fixtureId = fixtureIdFor(fixtureGroup.date, fixture.time, fixture.homeTeamId, fixture.awayTeamId)
+
+    return completedResults.find((result) => result.id === fixtureId)
+  }
+
+  function goalEventsForResult(result) {
+    return (result?.events ?? []).filter((event) => event.type === 'Goal' && event.scorer)
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  function goalEventsForTeam(result, teamId) {
+    return goalEventsForResult(result).filter((event) => event.teamId === teamId)
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  function scorerText(event) {
+    return `⚽ ${event.scorer}${event.minute ? ` ${event.minute}` : ''}${
+      event.assist && event.assist !== 'No assist' ? `, assist ${event.assist}` : ''
+    }`
+  }
+
+  function matchEventsForTeam(result, teamId) {
+    return (result?.events ?? []).filter(
+      (event) => event.teamId === teamId && event.scorer && ['Goal', 'Yellow Card', 'Red Card'].includes(event.type),
+    )
+  }
+
+  function matchEventText(event) {
+    const iconByType = {
+      Goal: '\u26BD',
+      'Yellow Card': '\u{1F7E8}',
+      'Red Card': '\u{1F7E5}',
+    }
+    const icon = iconByType[event.type] ?? '\u26BD'
+    const assist = event.type === 'Goal' && event.assist && event.assist !== 'No assist' ? `, assist ${event.assist}` : ''
+
+    return `${icon} ${event.scorer}${event.minute ? ` ${event.minute}` : ''}${assist}`
+  }
+
+  function splitFixtureGroups(hasResult) {
+    return fixtures
+      .map((fixtureGroup) => ({
+        ...fixtureGroup,
+        matches: fixtureGroup.matches.filter((fixture) => Boolean(getFixtureResult(fixtureGroup, fixture)) === hasResult),
+      }))
+      .filter((fixtureGroup) => fixtureGroup.matches.length > 0)
+  }
+
+  function FixtureCard({ fixtureGroup, fixture }) {
+    const homeTeam = teamById[fixture.homeTeamId]
+    const awayTeam = teamById[fixture.awayTeamId]
+    const result = getFixtureResult(fixtureGroup, fixture)
+
+    return (
+      <div className={`fixture-card ${result ? 'completed' : ''}`} key={`${fixtureGroup.date}-${fixture.time}`}>
+        <div className="fixture-time">{fixture.time}</div>
+        <div className="fixture-body">
+          <div className="fixture-line">
+            <div className="fixture-team">
+              <FixtureLogo team={homeTeam} />
+              <strong>{homeTeam.name}</strong>
+            </div>
+            <span className={`fixture-vs ${result ? 'score' : ''}`}>
+              {result ? `${result.homeScore} - ${result.awayScore}` : 'vs'}
+            </span>
+            <div className="fixture-team">
+              <FixtureLogo team={awayTeam} />
+              <strong>{awayTeam.name}</strong>
+            </div>
+          </div>
+          {result && (
+            <div className="fixture-result-summary">
+              <strong>Full time</strong>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   function LiveMatchView({ admin = false }) {
     const homeTeam = teamById[matchState.homeTeamId] ?? normalizedTeams[0]
     const awayTeam = teamById[matchState.awayTeamId] ?? normalizedTeams[1]
@@ -555,6 +648,19 @@ function App() {
         teamId: matchState.homeTeamId,
         type: 'Goal',
       })
+    }
+
+    if (!admin && matchState.status === 'Not started') {
+      return (
+        <section className="member-message live-empty-state">
+          <p className="eyebrow">Live Match</p>
+          <h2>No live match yet.</h2>
+          <p>The scoreboard will appear when the admin starts a match.</p>
+          <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+            Back
+          </button>
+        </section>
+      )
     }
 
     return (
@@ -674,6 +780,20 @@ function App() {
                 placeholder="Min"
               />
               <select
+                value={eventForm.type}
+                onChange={(event) =>
+                  setEventForm({
+                    ...eventForm,
+                    assist: event.target.value === 'Goal' ? eventForm.assist : '',
+                    type: event.target.value,
+                  })
+                }
+              >
+                <option>Goal</option>
+                <option>Yellow Card</option>
+                <option>Red Card</option>
+              </select>
+              <select
                 value={eventForm.teamId}
                 onChange={(event) =>
                   setEventForm({ ...eventForm, assist: '', scorer: '', teamId: event.target.value })
@@ -689,7 +809,7 @@ function App() {
                 value={eventForm.scorer}
                 onChange={(event) => setEventForm({ ...eventForm, scorer: event.target.value })}
               >
-                <option value="">Scorer</option>
+                <option value="">{eventForm.type === 'Goal' ? 'Scorer' : 'Player'}</option>
                 {selectedTeamPlayers.map((assignment) => (
                   <option key={assignment.player} value={parsePlayerRole(assignment.player).name}>
                     {parsePlayerRole(assignment.player).name}
@@ -697,6 +817,7 @@ function App() {
                 ))}
               </select>
               <select
+                disabled={eventForm.type !== 'Goal'}
                 value={eventForm.assist}
                 onChange={(event) => setEventForm({ ...eventForm, assist: event.target.value })}
               >
@@ -735,8 +856,8 @@ function App() {
                   <strong>{event.minute || '--'}</strong>
                   <div>
                     <span>{eventTeam?.name}</span>
-                    {event.scorer && <p>Goal: {event.scorer}</p>}
-                    {event.assist && <p>Assist: {event.assist}</p>}
+                    {event.scorer && <p>{event.type}: {event.scorer}</p>}
+                    {event.type === 'Goal' && event.assist && <p>Assist: {event.assist}</p>}
                     {event.note && <p>{event.note}</p>}
                   </div>
                   {admin && (
@@ -877,7 +998,10 @@ function App() {
                 View fixtures
               </button>
               <button className="ghost-button" type="button" onClick={() => setMemberView('table')}>
-                Match results
+                League Standing
+              </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('results')}>
+                Match Results
               </button>
               <button className="ghost-button" type="button" onClick={() => setMemberView('live')}>
                 Watch live match
@@ -919,38 +1043,39 @@ function App() {
             <div className="member-section-header">
               <div>
                 <p className="eyebrow">Fixtures</p>
-                <h2>Upcoming matches</h2>
+                <h2>Match fixtures</h2>
               </div>
               <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
                 Back
               </button>
             </div>
 
+            <div className="fixture-section-title">
+              <p className="eyebrow">Completed matches</p>
+            </div>
             <div className="fixture-list">
-              {fixtures.map((fixtureGroup) => (
+              {splitFixtureGroups(true).length === 0 && <p className="empty-state">No completed match yet.</p>}
+              {splitFixtureGroups(true).map((fixtureGroup) => (
                 <div className="fixture-day" key={fixtureGroup.date}>
                   <h3>{fixtureGroup.date}</h3>
-                  {fixtureGroup.matches.map((fixture) => {
-                    const homeTeam = teamById[fixture.homeTeamId]
-                    const awayTeam = teamById[fixture.awayTeamId]
+                  {fixtureGroup.matches.map((fixture) => (
+                    <FixtureCard fixture={fixture} fixtureGroup={fixtureGroup} key={`${fixtureGroup.date}-${fixture.time}`} />
+                  ))}
+                </div>
+              ))}
+            </div>
 
-                    return (
-                      <div className="fixture-card" key={`${fixtureGroup.date}-${fixture.time}`}>
-                        <div className="fixture-time">{fixture.time}</div>
-                        <div className="fixture-line">
-                          <div className="fixture-team">
-                            <FixtureLogo team={homeTeam} />
-                            <strong>{homeTeam.name}</strong>
-                          </div>
-                          <span className="fixture-vs">vs</span>
-                          <div className="fixture-team">
-                            <FixtureLogo team={awayTeam} />
-                            <strong>{awayTeam.name}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+            <div className="fixture-section-title upcoming">
+              <p className="eyebrow">Upcoming matches</p>
+            </div>
+            <div className="fixture-list">
+              {splitFixtureGroups(false).length === 0 && <p className="empty-state">No upcoming match left.</p>}
+              {splitFixtureGroups(false).map((fixtureGroup) => (
+                <div className="fixture-day" key={fixtureGroup.date}>
+                  <h3>{fixtureGroup.date}</h3>
+                  {fixtureGroup.matches.map((fixture) => (
+                    <FixtureCard fixture={fixture} fixtureGroup={fixtureGroup} key={`${fixtureGroup.date}-${fixture.time}`} />
+                  ))}
                 </div>
               ))}
             </div>
@@ -961,7 +1086,7 @@ function App() {
           <section className="member-teams">
             <div className="member-section-header">
               <div>
-                <p className="eyebrow">Match Results</p>
+                <p className="eyebrow">League Standing</p>
                 <h2>League standings</h2>
               </div>
               <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
@@ -1007,6 +1132,20 @@ function App() {
                 </tbody>
               </table>
             </div>
+          </section>
+        )}
+
+        {memberView === 'results' && (
+          <section className="member-teams">
+            <div className="member-section-header">
+              <div>
+                <p className="eyebrow">Match Results</p>
+                <h2>Completed results</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                Back
+              </button>
+            </div>
             <div className="result-history">
               <div className="panel-heading">
                 <h2>Full-time results</h2>
@@ -1023,6 +1162,26 @@ function App() {
                         {teamById[result.homeTeamId]?.name} {result.homeScore} - {result.awayScore}{' '}
                         {teamById[result.awayTeamId]?.name}
                       </strong>
+                      <div className="result-scorers match-scorers">
+                        {matchEventsForTeam(result, result.homeTeamId).length + matchEventsForTeam(result, result.awayTeamId).length === 0 ? (
+                          <em>No match event recorded.</em>
+                        ) : (
+                          <>
+                            <div>
+                              <b>{teamById[result.homeTeamId]?.name}</b>
+                              {matchEventsForTeam(result, result.homeTeamId).map((event) => (
+                                <span key={event.id}>{matchEventText(event)}</span>
+                              ))}
+                            </div>
+                            <div>
+                              <b>{teamById[result.awayTeamId]?.name}</b>
+                              {matchEventsForTeam(result, result.awayTeamId).map((event) => (
+                                <span key={event.id}>{matchEventText(event)}</span>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

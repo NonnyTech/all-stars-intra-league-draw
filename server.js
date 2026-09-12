@@ -3,6 +3,8 @@ import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import 'dotenv/config'
+import pg from 'pg'
 import { Server } from 'socket.io'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -18,6 +20,15 @@ const PORT = process.env.PORT || 3000
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AllStars@2026$'
 const MEMBER_PASSWORD = process.env.MEMBER_PASSWORD || 'watch2026'
 const DATA_FILE = path.join(__dirname, 'league-state.json')
+const DATABASE_URL = process.env.DATABASE_URL
+const DATABASE_SSL = process.env.DATABASE_SSL ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')
+const { Pool } = pg
+const db = DATABASE_URL
+  ? new Pool({
+      connectionString: DATABASE_URL,
+      ssl: DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    })
+  : null
 
 const TEAMS = [
   { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e', logo: '/team-logos/seat-of-wisdom.jpg' },
@@ -149,6 +160,25 @@ const defaultMatchState = {
   events: [],
 }
 
+const SEEDED_COMPLETED_RESULTS = [
+  {
+    id: '2026-09-12-0845-wisdom-mirror',
+    date: '12 Sept 2026',
+    time: '8:45 AM',
+    homeTeamId: 'wisdom',
+    awayTeamId: 'mirror',
+    homeScore: 2,
+    awayScore: 1,
+    status: 'Full time',
+    savedAt: '2026-09-12T00:00:00.000Z',
+    events: [
+      { id: 'wisdom-mirror-afam', assist: '', minute: '', note: '', scorer: 'Afam', teamId: 'wisdom', type: 'Goal' },
+      { id: 'wisdom-mirror-stanley', assist: '', minute: '', note: '', scorer: 'Stanley Njoku', teamId: 'wisdom', type: 'Goal' },
+      { id: 'wisdom-mirror-martins', assist: '', minute: '', note: '', scorer: 'Martins', teamId: 'mirror', type: 'Goal' },
+    ],
+  },
+]
+
 let matchState = { ...defaultMatchState }
 let completedResults = []
 
@@ -216,11 +246,59 @@ function buildLeagueTable() {
     })
 }
 
-function saveLeagueState() {
+async function initDatabase() {
+  if (!db) return
+
+  await db.query(`
+    create table if not exists league_state (
+      id text primary key,
+      data jsonb not null,
+      updated_at timestamptz not null default now()
+    )
+  `)
+}
+
+async function saveLeagueState() {
+  const nextState = { completedResults, matchState }
+
+  if (db) {
+    try {
+      await db.query(
+        `
+          insert into league_state (id, data, updated_at)
+          values ($1, $2, now())
+          on conflict (id)
+          do update set data = excluded.data, updated_at = now()
+        `,
+        ['main', nextState],
+      )
+      return
+    } catch (error) {
+      console.error('Unable to save league state to database:', error)
+    }
+  }
+
   writeFileSync(DATA_FILE, JSON.stringify({ completedResults, matchState }, null, 2))
 }
 
-function loadLeagueState() {
+async function loadLeagueState() {
+  if (db) {
+    try {
+      const result = await db.query('select data from league_state where id = $1', ['main'])
+      const savedState = result.rows[0]?.data
+
+      if (savedState?.matchState) {
+        matchState = { ...defaultMatchState, ...savedState.matchState }
+      }
+      if (Array.isArray(savedState?.completedResults)) {
+        completedResults = savedState.completedResults
+      }
+      return
+    } catch (error) {
+      console.error('Unable to load league state from database:', error)
+    }
+  }
+
   if (!existsSync(DATA_FILE)) return
 
   try {
@@ -236,7 +314,14 @@ function loadLeagueState() {
   }
 }
 
-loadLeagueState()
+function mergeSeededResults() {
+  completedResults = [
+    ...SEEDED_COMPLETED_RESULTS,
+    ...completedResults.filter(
+      (result) => !SEEDED_COMPLETED_RESULTS.some((seededResult) => seededResult.id === result.id),
+    ),
+  ]
+}
 
 function publicState() {
   return {
@@ -477,6 +562,22 @@ io.on('connection', (socket) => {
   })
 })
 
-httpServer.listen(PORT, () => {
-  console.log(`All Stars draw server running on port ${PORT}`)
-})
+async function startServer() {
+  try {
+    await initDatabase()
+    await loadLeagueState()
+    mergeSeededResults()
+    await saveLeagueState()
+  } catch (error) {
+    console.error('Unable to initialize league storage:', error)
+    await loadLeagueState()
+    mergeSeededResults()
+  }
+
+  httpServer.listen(PORT, () => {
+    console.log(`All Stars draw server running on port ${PORT}`)
+    console.log(`League storage: ${db ? 'PostgreSQL database' : 'local JSON file'}`)
+  })
+}
+
+startServer()
