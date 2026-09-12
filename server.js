@@ -175,6 +175,10 @@ const SEEDED_COMPLETED_RESULTS = [
       { id: 'wisdom-mirror-afam', assist: '', minute: '', note: '', scorer: 'Afam', teamId: 'wisdom', type: 'Goal' },
       { id: 'wisdom-mirror-stanley', assist: '', minute: '', note: '', scorer: 'Stanley Njoku', teamId: 'wisdom', type: 'Goal' },
       { id: 'wisdom-mirror-martins', assist: '', minute: '', note: '', scorer: 'Martins', teamId: 'mirror', type: 'Goal' },
+      { id: 'wisdom-mirror-yellow-dickson', assist: '', minute: '', note: '', scorer: 'Dickson', teamId: 'wisdom', type: 'Yellow Card' },
+      { id: 'wisdom-mirror-yellow-pius', assist: '', minute: '', note: '', scorer: 'Pius', teamId: 'wisdom', type: 'Yellow Card' },
+      { id: 'wisdom-mirror-yellow-victor', assist: '', minute: '', note: '', scorer: 'Victor', teamId: 'wisdom', type: 'Yellow Card' },
+      { id: 'wisdom-mirror-yellow-henry-ike', assist: '', minute: '', note: '', scorer: 'Henry Ike', teamId: 'mirror', type: 'Yellow Card' },
     ],
   },
 ]
