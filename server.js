@@ -29,6 +29,7 @@ const db = DATABASE_URL
       ssl: DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
     })
   : null
+let storageReady = false
 
 const TEAMS = [
   { id: 'wisdom', name: 'Seat of Wisdom', color: '#8ee88e', logo: '/team-logos/seat-of-wisdom.jpg' },
@@ -181,6 +182,24 @@ const SEEDED_COMPLETED_RESULTS = [
       { id: 'wisdom-mirror-yellow-henry-ike', assist: '', minute: '', note: '', scorer: 'Henry Ike', teamId: 'mirror', type: 'Yellow Card' },
     ],
   },
+  {
+    id: '2026-09-12-1000-tower-star',
+    date: '12 Sept 2026',
+    time: '10:00 AM',
+    homeTeamId: 'tower',
+    awayTeamId: 'star',
+    homeScore: 1,
+    awayScore: 2,
+    status: 'Full time',
+    savedAt: '2026-09-12T00:00:00.000Z',
+    events: [
+      { id: 'tower-star-inzaghi', assist: '', minute: '', note: '', scorer: 'Inzaghi', teamId: 'tower', type: 'Goal' },
+      { id: 'tower-star-uche-oriaku', assist: '', minute: '', note: '', scorer: 'Uche oriaku', teamId: 'star', type: 'Goal' },
+      { id: 'tower-star-obinna', assist: '', minute: '', note: '', scorer: 'Obinna', teamId: 'star', type: 'Goal' },
+      { id: 'tower-star-yellow-yemi', assist: '', minute: '', note: '', scorer: 'Yemi', teamId: 'tower', type: 'Yellow Card' },
+      { id: 'tower-star-yellow-tobby-ekwueme', assist: '', minute: '', note: '', scorer: 'Tobby Ekwueme', teamId: 'star', type: 'Yellow Card' },
+    ],
+  },
 ]
 
 let matchState = { ...defaultMatchState }
@@ -276,8 +295,10 @@ async function saveLeagueState() {
         `,
         ['main', nextState],
       )
+      storageReady = true
       return
     } catch (error) {
+      storageReady = false
       console.error('Unable to save league state to database:', error)
     }
   }
@@ -470,7 +491,7 @@ io.on('connection', (socket) => {
     emitState()
   })
 
-  socket.on('update-match', (nextMatchState) => {
+  socket.on('update-match', async (nextMatchState) => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const selectedFixture = FIXTURES.find((fixture) => fixture.id === nextMatchState.fixtureId)
@@ -481,7 +502,7 @@ io.on('connection', (socket) => {
         homeTeamId: selectedFixture.homeTeamId,
         awayTeamId: selectedFixture.awayTeamId,
       }
-      saveLeagueState()
+      await saveLeagueState()
       emitState()
       return
     }
@@ -490,11 +511,11 @@ io.on('connection', (socket) => {
       ...matchState,
       ...nextMatchState,
     }
-    saveLeagueState()
+    await saveLeagueState()
     emitState()
   })
 
-  socket.on('add-match-event', (event) => {
+  socket.on('add-match-event', async (event) => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const nextEvent = {
@@ -513,22 +534,22 @@ io.on('connection', (socket) => {
       ...matchState,
       events: [nextEvent, ...matchState.events],
     }
-    saveLeagueState()
+    await saveLeagueState()
     emitState()
   })
 
-  socket.on('delete-match-event', (eventId) => {
+  socket.on('delete-match-event', async (eventId) => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     matchState = {
       ...matchState,
       events: matchState.events.filter((event) => event.id !== eventId),
     }
-    saveLeagueState()
+    await saveLeagueState()
     emitState()
   })
 
-  socket.on('reset-live-match', () => {
+  socket.on('reset-live-match', async () => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const selectedFixture = FIXTURES.find((fixture) => fixture.id === matchState.fixtureId) ?? firstFixture
@@ -538,11 +559,11 @@ io.on('connection', (socket) => {
       homeTeamId: selectedFixture.homeTeamId,
       awayTeamId: selectedFixture.awayTeamId,
     }
-    saveLeagueState()
+    await saveLeagueState()
     emitState()
   })
 
-  socket.on('save-match-result', () => {
+  socket.on('save-match-result', async () => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const selectedFixture = FIXTURES.find((fixture) => fixture.id === matchState.fixtureId) ?? firstFixture
@@ -561,7 +582,7 @@ io.on('connection', (socket) => {
 
     completedResults = [result, ...completedResults.filter((item) => item.id !== result.id)]
     matchState = { ...matchState, status: 'Full time' }
-    saveLeagueState()
+    await saveLeagueState()
     emitState()
   })
 })
@@ -572,15 +593,17 @@ async function startServer() {
     await loadLeagueState()
     mergeSeededResults()
     await saveLeagueState()
+    storageReady = true
   } catch (error) {
     console.error('Unable to initialize league storage:', error)
     await loadLeagueState()
     mergeSeededResults()
+    storageReady = !db
   }
 
   httpServer.listen(PORT, () => {
     console.log(`All Stars draw server running on port ${PORT}`)
-    console.log(`League storage: ${db ? 'PostgreSQL database' : 'local JSON file'}`)
+    console.log(`League storage: ${db && storageReady ? 'PostgreSQL database' : 'local JSON file'}`)
   })
 }
 

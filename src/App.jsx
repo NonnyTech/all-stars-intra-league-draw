@@ -566,15 +566,15 @@ function App() {
   }
 
   function matchEventText(event) {
-    const iconByType = {
-      Goal: '\u26BD',
-      'Yellow Card': '\u{1F7E8}',
-      'Red Card': '\u{1F7E5}',
+    const labelByType = {
+      Goal: '\u26BD Goal',
+      'Yellow Card': '\u{1F7E8} Yellow card',
+      'Red Card': '\u{1F7E5} Red card',
     }
-    const icon = iconByType[event.type] ?? '\u26BD'
+    const label = labelByType[event.type] ?? '\u26BD Goal'
     const assist = event.type === 'Goal' && event.assist && event.assist !== 'No assist' ? `, assist ${event.assist}` : ''
 
-    return `${icon} ${event.scorer}${event.minute ? ` ${event.minute}` : ''}${assist}`
+    return `${label}: ${event.scorer}${event.minute ? ` ${event.minute}` : ''}${assist}`
   }
 
   function splitFixtureGroups(hasResult) {
@@ -1155,27 +1155,50 @@ function App() {
                 <p className="empty-state">No completed match result yet.</p>
               ) : (
                 <div className="result-list">
-                  {completedResults.map((result) => (
+                  {completedResults.map((result) => {
+                    const homeTeam = teamById[result.homeTeamId]
+                    const awayTeam = teamById[result.awayTeamId]
+                    const homeEvents = matchEventsForTeam(result, result.homeTeamId)
+                    const awayEvents = matchEventsForTeam(result, result.awayTeamId)
+
+                    return (
                     <div className="result-card" key={result.id}>
-                      <span>{result.date} - {result.time}</span>
-                      <strong>
-                        {teamById[result.homeTeamId]?.name} {result.homeScore} - {result.awayScore}{' '}
-                        {teamById[result.awayTeamId]?.name}
-                      </strong>
+                      <div className="result-meta">
+                        <span>{result.date}</span>
+                        <strong>{result.time}</strong>
+                        <em>Full time</em>
+                      </div>
+                      <div className="result-scoreboard">
+                        <div className="result-team">
+                          <FixtureLogo team={homeTeam} />
+                          <strong>{homeTeam?.name}</strong>
+                        </div>
+                        <div className="result-score">
+                          <b>{result.homeScore}</b>
+                          <span>-</span>
+                          <b>{result.awayScore}</b>
+                        </div>
+                        <div className="result-team away">
+                          <FixtureLogo team={awayTeam} />
+                          <strong>{awayTeam?.name}</strong>
+                        </div>
+                      </div>
                       <div className="result-scorers match-scorers">
-                        {matchEventsForTeam(result, result.homeTeamId).length + matchEventsForTeam(result, result.awayTeamId).length === 0 ? (
+                        {homeEvents.length + awayEvents.length === 0 ? (
                           <em>No match event recorded.</em>
                         ) : (
                           <>
                             <div>
-                              <b>{teamById[result.homeTeamId]?.name}</b>
-                              {matchEventsForTeam(result, result.homeTeamId).map((event) => (
+                              <b>{homeTeam?.name}</b>
+                              {homeEvents.length === 0 && <small>No events</small>}
+                              {homeEvents.map((event) => (
                                 <span key={event.id}>{matchEventText(event)}</span>
                               ))}
                             </div>
                             <div>
-                              <b>{teamById[result.awayTeamId]?.name}</b>
-                              {matchEventsForTeam(result, result.awayTeamId).map((event) => (
+                              <b>{awayTeam?.name}</b>
+                              {awayEvents.length === 0 && <small>No events</small>}
+                              {awayEvents.map((event) => (
                                 <span key={event.id}>{matchEventText(event)}</span>
                               ))}
                             </div>
@@ -1183,7 +1206,8 @@ function App() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
