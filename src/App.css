@@ -941,6 +941,13 @@ h2 {
   margin-top: 18px;
 }
 
+.match-save-status {
+  color: #f4c95d;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 12px 0 0;
+}
+
 .scoreboard {
   align-items: stretch;
   display: grid;

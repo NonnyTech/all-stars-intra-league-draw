@@ -285,7 +285,7 @@ async function initDatabase() {
 }
 
 async function saveLeagueState() {
-  if (LEAGUE_TEST_MODE) return
+  if (LEAGUE_TEST_MODE) return { ok: true, storage: 'memory' }
 
   const nextState = { completedResults, matchState }
 
@@ -301,7 +301,7 @@ async function saveLeagueState() {
         ['main', nextState],
       )
       storageReady = true
-      return
+      return { ok: true, storage: 'database' }
     } catch (error) {
       storageReady = false
       console.error('Unable to save league state to database:', error)
@@ -309,6 +309,7 @@ async function saveLeagueState() {
   }
 
   writeFileSync(DATA_FILE, JSON.stringify({ completedResults, matchState }, null, 2))
+  return { ok: !db, storage: 'file' }
 }
 
 async function loadLeagueState() {
@@ -347,11 +348,10 @@ async function loadLeagueState() {
 }
 
 function mergeSeededResults() {
+  const savedResultIds = new Set(completedResults.map((result) => result.id))
   completedResults = [
-    ...SEEDED_COMPLETED_RESULTS,
-    ...completedResults.filter(
-      (result) => !SEEDED_COMPLETED_RESULTS.some((seededResult) => seededResult.id === result.id),
-    ),
+    ...completedResults,
+    ...SEEDED_COMPLETED_RESULTS.filter((result) => !savedResultIds.has(result.id)),
   ]
 }
 
@@ -624,7 +624,7 @@ io.on('connection', (socket) => {
     await saveLeagueState()
   })
 
-  socket.on('save-match-result', async () => {
+  socket.on('save-match-result', async (callback) => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const selectedFixture = FIXTURES.find((fixture) => fixture.id === matchState.fixtureId) ?? firstFixture
@@ -644,7 +644,11 @@ io.on('connection', (socket) => {
     completedResults = [result, ...completedResults.filter((item) => item.id !== result.id)]
     applyMatchStatus('Full time')
     emitState()
-    await saveLeagueState()
+    const saveResult = await saveLeagueState()
+    callback?.({
+      ok: saveResult.ok,
+      storage: saveResult.storage,
+    })
   })
 })
 
@@ -661,8 +665,8 @@ async function startServer() {
     await initDatabase()
     await loadLeagueState()
     if (!LEAGUE_TEST_MODE) mergeSeededResults()
-    await saveLeagueState()
-    storageReady = true
+    const saveResult = await saveLeagueState()
+    storageReady = saveResult.storage === 'database'
   } catch (error) {
     console.error('Unable to initialize league storage:', error)
     await loadLeagueState()

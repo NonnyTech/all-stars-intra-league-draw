@@ -205,6 +205,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [memberView, setMemberView] = useState('home')
   const [adminView, setAdminView] = useState('dashboard')
+  const [saveResultStatus, setSaveResultStatus] = useState('')
   const [eventForm, setEventForm] = useState({
     assist: '',
     minute: '',
@@ -373,6 +374,7 @@ function App() {
   }
 
   function updateMatch(nextMatchState) {
+    setSaveResultStatus('')
     socket.emit('update-match', nextMatchState)
   }
 
@@ -389,7 +391,20 @@ function App() {
   }
 
   function saveMatchResult() {
-    socket.emit('save-match-result')
+    setSaveResultStatus('Saving result...')
+    socket.emit('save-match-result', (response) => {
+      if (response?.ok && response.storage === 'database') {
+        setSaveResultStatus('Result saved permanently to PostgreSQL.')
+        return
+      }
+
+      if (response?.ok && response.storage === 'memory') {
+        setSaveResultStatus('Test result saved in memory only.')
+        return
+      }
+
+      setSaveResultStatus('PostgreSQL save failed. Check the server logs before closing the match.')
+    })
   }
 
   async function imageToDataUrl(url) {
@@ -786,6 +801,7 @@ function App() {
                 Reset live match
               </button>
             </div>
+            {saveResultStatus && <p className="match-save-status" role="status">{saveResultStatus}</p>}
 
             <form className="match-event-form" onSubmit={submitMatchEvent}>
               <input
