@@ -22,8 +22,9 @@ const MEMBER_PASSWORD = process.env.MEMBER_PASSWORD || 'watch2026'
 const DATA_FILE = path.join(__dirname, 'league-state.json')
 const DATABASE_URL = process.env.DATABASE_URL
 const DATABASE_SSL = process.env.DATABASE_SSL ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')
+const LEAGUE_TEST_MODE = process.env.LEAGUE_TEST_MODE === 'true'
 const { Pool } = pg
-const db = DATABASE_URL
+const db = DATABASE_URL && !LEAGUE_TEST_MODE
   ? new Pool({
       connectionString: DATABASE_URL,
       ssl: DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
@@ -158,6 +159,8 @@ const defaultMatchState = {
   awayScore: 0,
   status: 'Not started',
   minute: '',
+  clockStartedAt: null,
+  elapsedSeconds: 0,
   events: [],
 }
 
@@ -282,6 +285,8 @@ async function initDatabase() {
 }
 
 async function saveLeagueState() {
+  if (LEAGUE_TEST_MODE) return
+
   const nextState = { completedResults, matchState }
 
   if (db) {
@@ -307,6 +312,8 @@ async function saveLeagueState() {
 }
 
 async function loadLeagueState() {
+  if (LEAGUE_TEST_MODE) return
+
   if (db) {
     try {
       const result = await db.query('select data from league_state where id = $1', ['main'])
@@ -348,13 +355,66 @@ function mergeSeededResults() {
   ]
 }
 
+function currentElapsedSeconds() {
+  const savedSeconds = Number(matchState.elapsedSeconds) || 0
+  if (!matchState.clockStartedAt) return savedSeconds
+
+  return savedSeconds + Math.max(0, Math.floor((Date.now() - matchState.clockStartedAt) / 1000))
+}
+
+function formatMatchClock(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function publicMatchState() {
+  return {
+    ...matchState,
+    minute: matchState.status === 'Not started' ? '' : formatMatchClock(currentElapsedSeconds()),
+  }
+}
+
+function applyMatchStatus(status) {
+  if (status === matchState.status) return
+
+  const elapsedSeconds = currentElapsedSeconds()
+
+  if (status === 'First half') {
+    matchState = {
+      ...matchState,
+      status,
+      elapsedSeconds: matchState.status === 'Not started' ? 0 : elapsedSeconds,
+      clockStartedAt: Date.now(),
+    }
+    return
+  }
+
+  if (status === 'Second half') {
+    matchState = {
+      ...matchState,
+      status,
+      elapsedSeconds: Math.max(elapsedSeconds, 45 * 60),
+      clockStartedAt: Date.now(),
+    }
+    return
+  }
+
+  matchState = {
+    ...matchState,
+    status,
+    elapsedSeconds,
+    clockStartedAt: null,
+  }
+}
+
 function publicState() {
   return {
     ...drawState,
     completedResults,
     fixtures: FIXTURES,
     leagueTable: buildLeagueTable(),
-    matchState,
+    matchState: publicMatchState(),
     teams: TEAMS,
   }
 }
@@ -502,17 +562,16 @@ io.on('connection', (socket) => {
         homeTeamId: selectedFixture.homeTeamId,
         awayTeamId: selectedFixture.awayTeamId,
       }
-      await saveLeagueState()
       emitState()
+      await saveLeagueState()
       return
     }
 
-    matchState = {
-      ...matchState,
-      ...nextMatchState,
-    }
-    await saveLeagueState()
+    const { status, minute: _minute, ...matchUpdates } = nextMatchState
+    matchState = { ...matchState, ...matchUpdates }
+    if (status) applyMatchStatus(status)
     emitState()
+    await saveLeagueState()
   })
 
   socket.on('add-match-event', async (event) => {
@@ -521,7 +580,9 @@ io.on('connection', (socket) => {
     const nextEvent = {
       id: Date.now(),
       assist: String(event.assist ?? '').trim(),
-      minute: String(event.minute ?? '').trim(),
+      minute:
+        String(event.minute ?? '').trim() ||
+        (matchState.status === 'Not started' ? '' : `${Math.max(1, Math.ceil(currentElapsedSeconds() / 60))}'`),
       note: String(event.note ?? '').trim(),
       scorer: String(event.scorer ?? '').trim(),
       teamId: event.teamId,
@@ -534,8 +595,8 @@ io.on('connection', (socket) => {
       ...matchState,
       events: [nextEvent, ...matchState.events],
     }
-    await saveLeagueState()
     emitState()
+    await saveLeagueState()
   })
 
   socket.on('delete-match-event', async (eventId) => {
@@ -545,8 +606,8 @@ io.on('connection', (socket) => {
       ...matchState,
       events: matchState.events.filter((event) => event.id !== eventId),
     }
-    await saveLeagueState()
     emitState()
+    await saveLeagueState()
   })
 
   socket.on('reset-live-match', async () => {
@@ -559,8 +620,8 @@ io.on('connection', (socket) => {
       homeTeamId: selectedFixture.homeTeamId,
       awayTeamId: selectedFixture.awayTeamId,
     }
-    await saveLeagueState()
     emitState()
+    await saveLeagueState()
   })
 
   socket.on('save-match-result', async () => {
@@ -581,17 +642,25 @@ io.on('connection', (socket) => {
     }
 
     completedResults = [result, ...completedResults.filter((item) => item.id !== result.id)]
-    matchState = { ...matchState, status: 'Full time' }
-    await saveLeagueState()
+    applyMatchStatus('Full time')
     emitState()
+    await saveLeagueState()
   })
 })
 
+setInterval(() => {
+  if (matchState.clockStartedAt) emitState()
+}, 1000)
+
 async function startServer() {
+  if (LEAGUE_TEST_MODE) {
+    console.log('League test mode enabled: changes will not be saved')
+  }
+
   try {
     await initDatabase()
     await loadLeagueState()
-    mergeSeededResults()
+    if (!LEAGUE_TEST_MODE) mergeSeededResults()
     await saveLeagueState()
     storageReady = true
   } catch (error) {
@@ -603,7 +672,9 @@ async function startServer() {
 
   httpServer.listen(PORT, () => {
     console.log(`All Stars draw server running on port ${PORT}`)
-    console.log(`League storage: ${db && storageReady ? 'PostgreSQL database' : 'local JSON file'}`)
+    console.log(
+      `League storage: ${LEAGUE_TEST_MODE ? 'test memory only (not saved)' : db && storageReady ? 'PostgreSQL database' : 'local JSON file'}`,
+    )
   })
 }
 

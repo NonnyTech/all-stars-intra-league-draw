@@ -205,6 +205,14 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [memberView, setMemberView] = useState('home')
   const [adminView, setAdminView] = useState('dashboard')
+  const [eventForm, setEventForm] = useState({
+    assist: '',
+    minute: '',
+    note: '',
+    scorer: '',
+    teamId: initialState.matchState.homeTeamId,
+    type: 'Goal',
+  })
   const isAdmin = role === 'admin'
   const isLoggedIn = role === 'admin' || role === 'member'
 
@@ -618,7 +626,7 @@ function App() {
     )
   }
 
-  function LiveMatchView({ admin = false }) {
+  function renderLiveMatchView({ admin = false } = {}) {
     const homeTeam = teamById[matchState.homeTeamId] ?? normalizedTeams[0]
     const awayTeam = teamById[matchState.awayTeamId] ?? normalizedTeams[1]
     const selectedFixture =
@@ -627,14 +635,6 @@ function App() {
         (fixture) => fixture.homeTeamId === matchState.homeTeamId && fixture.awayTeamId === matchState.awayTeamId,
       )
     const matchTeams = [homeTeam, awayTeam]
-    const [eventForm, setEventForm] = useState({
-      assist: '',
-      minute: '',
-      note: '',
-      scorer: '',
-      teamId: matchState.homeTeamId,
-      type: 'Goal',
-    })
     const selectedTeamPlayers = getTeamPlayers(eventForm.teamId)
 
     function submitMatchEvent(event) {
@@ -742,27 +742,19 @@ function App() {
                   onChange={(event) => updateMatch({ awayScore: Number(event.target.value) })}
                 />
               </label>
-              <label>
-                <span>Minute</span>
-                <input
-                  value={matchState.minute}
-                  onChange={(event) => updateMatch({ minute: event.target.value })}
-                  placeholder="45+1'"
-                />
-              </label>
             </div>
 
             <div className="match-quick-actions">
-              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'First half', minute: "1'" })}>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'First half' })}>
                 Start match
               </button>
-              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Half time', minute: "45'" })}>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Half time' })}>
                 Half time
               </button>
-              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Second half', minute: "46'" })}>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Second half' })}>
                 Second half
               </button>
-              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Full time', minute: "90'" })}>
+              <button className="ghost-button compact-button" type="button" onClick={() => updateMatch({ status: 'Full time' })}>
                 Full time
               </button>
               <button className="primary-button compact-button" type="button" onClick={saveMatchResult}>
@@ -1214,7 +1206,7 @@ function App() {
           </section>
         )}
 
-        {memberView === 'live' && <LiveMatchView />}
+        {memberView === 'live' && renderLiveMatchView()}
 
       </main>
     )
@@ -1251,7 +1243,7 @@ function App() {
       </section>
 
       {adminView === 'live' ? (
-        <LiveMatchView admin />
+        renderLiveMatchView({ admin: true })
       ) : (
       <section className="workspace">
         <aside className="panel player-panel" aria-label="Seeded player names">
