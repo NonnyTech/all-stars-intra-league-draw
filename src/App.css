@@ -909,6 +909,34 @@ h2 {
   width: 11px;
 }
 
+.scorers-table {
+  min-width: 560px;
+}
+
+.scorers-table th:first-child,
+.scorers-table td:first-child,
+.scorers-table th:last-child,
+.scorers-table td:last-child {
+  text-align: center;
+  width: 82px;
+}
+
+.scorers-table .scorer-player {
+  font-size: 17px;
+  text-align: left;
+}
+
+.goal-total {
+  align-items: center;
+  background: #f4c95d;
+  border-radius: 50%;
+  color: #08251d;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
 .live-match-panel {
   margin-top: 18px;
 }

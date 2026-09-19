@@ -256,6 +256,28 @@ function App() {
   const teamRosters = isAdmin ? liveTeamRosters : finalTeamRosters
   const activeFixtures = matchFixtures.length > 0 ? matchFixtures : initialState.fixtures
   const displayedLeagueTable = currentLeagueTable.length > 0 ? currentLeagueTable : leagueTable
+  const goalScorers = useMemo(() => {
+    const scorers = new Map()
+
+    completedResults.forEach((result) => {
+      ;(result.events ?? []).forEach((event) => {
+        if (event.type !== 'Goal' || !event.scorer?.trim()) return
+
+        const player = event.scorer.trim()
+        const key = `${event.teamId}:${player.toLowerCase()}`
+        const current = scorers.get(key)
+        scorers.set(key, {
+          goals: (current?.goals ?? 0) + 1,
+          player,
+          teamId: event.teamId,
+        })
+      })
+    })
+
+    return [...scorers.values()].sort(
+      (a, b) => b.goals - a.goals || a.player.localeCompare(b.player),
+    )
+  }, [completedResults])
 
   useEffect(() => {
     function handleConnect() {
@@ -995,6 +1017,9 @@ function App() {
               <button className="ghost-button" type="button" onClick={() => setMemberView('results')}>
                 Match Results
               </button>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('scorers')}>
+                Goal Scorers
+              </button>
               <button className="ghost-button" type="button" onClick={() => setMemberView('live')}>
                 Watch live match
               </button>
@@ -1203,6 +1228,56 @@ function App() {
                 </div>
               )}
             </div>
+          </section>
+        )}
+
+        {memberView === 'scorers' && (
+          <section className="member-teams">
+            <div className="member-section-header">
+              <div>
+                <p className="eyebrow">Player Statistics</p>
+                <h2>Goal scorers</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setMemberView('home')}>
+                Back
+              </button>
+            </div>
+            {goalScorers.length === 0 ? (
+              <p className="empty-state">No goals have been recorded yet.</p>
+            ) : (
+              <div className="table-wrap">
+                <table className="standings-table scorers-table">
+                  <thead>
+                    <tr>
+                      <th>Pos</th>
+                      <th>Player</th>
+                      <th>Team</th>
+                      <th>Goals</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goalScorers.map((scorer, index) => {
+                      const team = teamById[scorer.teamId]
+                      const rank = index > 0 && goalScorers[index - 1].goals === scorer.goals
+                        ? goalScorers.findIndex((item) => item.goals === scorer.goals) + 1
+                        : index + 1
+
+                      return (
+                        <tr key={`${scorer.teamId}-${scorer.player}`}>
+                          <td>{rank}</td>
+                          <td className="scorer-player">{scorer.player}</td>
+                          <td>
+                            <span className="table-team-dot" style={{ background: team?.color }}></span>
+                            {team?.name ?? 'Unknown team'}
+                          </td>
+                          <td><strong className="goal-total">{scorer.goals}</strong></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
 
