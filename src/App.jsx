@@ -206,6 +206,8 @@ function App() {
   const [memberView, setMemberView] = useState('home')
   const [adminView, setAdminView] = useState('dashboard')
   const [saveResultStatus, setSaveResultStatus] = useState('')
+  const [editingResult, setEditingResult] = useState(null)
+  const [resultEditStatus, setResultEditStatus] = useState('')
   const [eventForm, setEventForm] = useState({
     assist: '',
     minute: '',
@@ -393,6 +395,11 @@ function App() {
   function saveMatchResult() {
     setSaveResultStatus('Saving result...')
     socket.emit('save-match-result', (response) => {
+      if (response?.message) {
+        setSaveResultStatus(response.message)
+        return
+      }
+
       if (response?.ok && response.storage === 'database') {
         setSaveResultStatus('Result saved permanently to PostgreSQL.')
         return
@@ -405,6 +412,58 @@ function App() {
 
       setSaveResultStatus('PostgreSQL save failed. Check the server logs before closing the match.')
     })
+  }
+
+  function saveEditedResult() {
+    if (!socket.connected) {
+      setResultEditStatus('The server is disconnected. Reconnect before saving changes.')
+      return
+    }
+
+    setResultEditStatus('Saving changes...')
+    socket.timeout(15000).emit('update-completed-result', editingResult, (error, response) => {
+      if (error) {
+        setResultEditStatus('The server did not confirm the update. Check the Render logs and try again.')
+        return
+      }
+
+      setResultEditStatus(response?.message ?? 'Unable to update this result.')
+      if (response?.ok) setEditingResult(null)
+    })
+  }
+
+  function updateEditedEvent(index, changes) {
+    setEditingResult((current) => ({
+      ...current,
+      events: current.events.map((event, eventIndex) =>
+        eventIndex === index ? { ...event, ...changes } : event,
+      ),
+    }))
+  }
+
+  function addEditedEvent(type = 'Goal') {
+    setEditingResult((current) => ({
+      ...current,
+      events: [
+        ...(current.events ?? []),
+        {
+          id: `edit-${Date.now()}`,
+          assist: '',
+          minute: '',
+          note: '',
+          scorer: '',
+          teamId: current.homeTeamId,
+          type,
+        },
+      ],
+    }))
+  }
+
+  function removeEditedEvent(index) {
+    setEditingResult((current) => ({
+      ...current,
+      events: current.events.filter((_event, eventIndex) => eventIndex !== index),
+    }))
   }
 
   async function imageToDataUrl(url) {
@@ -904,6 +963,79 @@ function App() {
     )
   }
 
+  function renderManageResults() {
+    if (editingResult) {
+      const homeTeam = teamById[editingResult.homeTeamId]
+      const awayTeam = teamById[editingResult.awayTeamId]
+
+      return (
+        <section className="member-teams result-editor">
+          <div className="member-section-header">
+            <div>
+              <p className="eyebrow">Admin Result Editor</p>
+              <h2>{homeTeam?.name} vs {awayTeam?.name}</h2>
+            </div>
+            <button className="ghost-button" type="button" onClick={() => setEditingResult(null)}>Cancel</button>
+          </div>
+          <div className="result-score-editor">
+            <label><span>{homeTeam?.name}</span><input min="0" type="number" value={editingResult.homeScore} onChange={(event) => setEditingResult({ ...editingResult, homeScore: Number(event.target.value) })} /></label>
+            <strong>-</strong>
+            <label><span>{awayTeam?.name}</span><input min="0" type="number" value={editingResult.awayScore} onChange={(event) => setEditingResult({ ...editingResult, awayScore: Number(event.target.value) })} /></label>
+          </div>
+          <div className="edited-events">
+            {(editingResult.events ?? []).map((event, index) => {
+              const eventPlayers = getTeamPlayers(event.teamId)
+              return (
+                <div className="edited-event" key={event.id ?? index}>
+                  <select value={event.type} onChange={(changeEvent) => updateEditedEvent(index, { type: changeEvent.target.value, assist: '' })}>
+                    <option>Goal</option><option>Yellow Card</option><option>Red Card</option>
+                  </select>
+                  <select value={event.teamId} onChange={(changeEvent) => updateEditedEvent(index, { teamId: changeEvent.target.value, scorer: '', assist: '' })}>
+                    <option value={editingResult.homeTeamId}>{homeTeam?.name}</option>
+                    <option value={editingResult.awayTeamId}>{awayTeam?.name}</option>
+                  </select>
+                  <select value={event.scorer} onChange={(changeEvent) => updateEditedEvent(index, { scorer: changeEvent.target.value })}>
+                    <option value="">Select player</option>
+                    {eventPlayers.map((assignment) => {
+                      const playerName = parsePlayerRole(assignment.player).name
+                      return <option key={assignment.player} value={playerName}>{playerName}</option>
+                    })}
+                  </select>
+                  <input value={event.minute ?? ''} onChange={(changeEvent) => updateEditedEvent(index, { minute: changeEvent.target.value })} placeholder="Min" />
+                  <button className="ghost-button compact-button" type="button" onClick={() => removeEditedEvent(index)}>Delete</button>
+                </div>
+              )
+            })}
+          </div>
+          <div className="result-editor-actions">
+            <button className="ghost-button" type="button" onClick={() => addEditedEvent('Goal')}>Add goal</button>
+            <button className="ghost-button" type="button" onClick={() => addEditedEvent('Yellow Card')}>Add card</button>
+            <button className="primary-button" type="button" onClick={saveEditedResult}>Save changes</button>
+          </div>
+          {resultEditStatus && <p className="match-save-status" role="status">{resultEditStatus}</p>}
+        </section>
+      )
+    }
+
+    return (
+      <section className="member-teams">
+        <div className="member-section-header">
+          <div><p className="eyebrow">Admin</p><h2>Manage match results</h2></div>
+          <button className="ghost-button" type="button" onClick={() => setAdminView('dashboard')}>Back</button>
+        </div>
+        <div className="manage-result-list">
+          {completedResults.map((result) => (
+            <div className="manage-result-row" key={result.id}>
+              <span>{result.date} · {result.time}</span>
+              <strong>{teamById[result.homeTeamId]?.name} {result.homeScore} - {result.awayScore} {teamById[result.awayTeamId]?.name}</strong>
+              <button className="ghost-button compact-button" type="button" onClick={() => { setEditingResult(structuredClone(result)); setResultEditStatus('') }}>Edit</button>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
   function TeamRosterList({ variant = 'compact' }) {
     return (
       <div className={`roster-list ${variant === 'showcase' ? 'showcase' : ''}`}>
@@ -1323,9 +1455,10 @@ function App() {
             </button>
           )}
           {adminView === 'dashboard' && (
-            <button className="ghost-button" type="button" onClick={() => setAdminView('live')}>
-              Live match
-            </button>
+            <>
+              <button className="ghost-button" type="button" onClick={() => setAdminView('results')}>Manage results</button>
+              <button className="ghost-button" type="button" onClick={() => setAdminView('live')}>Live match</button>
+            </>
           )}
           <button className="ghost-button" type="button" onClick={logout}>
             Logout
@@ -1335,6 +1468,8 @@ function App() {
 
       {adminView === 'live' ? (
         renderLiveMatchView({ admin: true })
+      ) : adminView === 'results' ? (
+        renderManageResults()
       ) : (
       <section className="workspace">
         <aside className="panel player-panel" aria-label="Seeded player names">

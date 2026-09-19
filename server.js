@@ -27,6 +27,7 @@ const { Pool } = pg
 const db = DATABASE_URL && !LEAGUE_TEST_MODE
   ? new Pool({
       connectionString: DATABASE_URL,
+      connectionTimeoutMillis: 10000,
       ssl: DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
     })
   : null
@@ -628,16 +629,36 @@ io.on('connection', (socket) => {
     if (!isAuthorized(socket) || !requireAdmin(socket)) return
 
     const selectedFixture = FIXTURES.find((fixture) => fixture.id === matchState.fixtureId) ?? firstFixture
+    const homeScore = Number(matchState.homeScore) || 0
+    const awayScore = Number(matchState.awayScore) || 0
+    const homeGoals = matchState.events.filter(
+      (event) => event.type === 'Goal' && event.teamId === selectedFixture.homeTeamId,
+    ).length
+    const awayGoals = matchState.events.filter(
+      (event) => event.type === 'Goal' && event.teamId === selectedFixture.awayTeamId,
+    ).length
+
+    if (homeGoals !== homeScore || awayGoals !== awayScore) {
+      const homeTeam = TEAMS.find((team) => team.id === selectedFixture.homeTeamId)
+      const awayTeam = TEAMS.find((team) => team.id === selectedFixture.awayTeamId)
+      callback?.({
+        ok: false,
+        reason: 'goal-mismatch',
+        message: `Recorded goals do not match the score. ${homeTeam.name}: ${homeScore} score, ${homeGoals} scorers. ${awayTeam.name}: ${awayScore} score, ${awayGoals} scorers.`,
+      })
+      return
+    }
+
     const result = {
       id: selectedFixture.id,
       date: selectedFixture.date,
       events: matchState.events,
-      homeScore: Number(matchState.homeScore) || 0,
+      homeScore,
       homeTeamId: selectedFixture.homeTeamId,
       savedAt: new Date().toISOString(),
       status: 'Full time',
       time: selectedFixture.time,
-      awayScore: Number(matchState.awayScore) || 0,
+      awayScore,
       awayTeamId: selectedFixture.awayTeamId,
     }
 
@@ -648,6 +669,58 @@ io.on('connection', (socket) => {
     callback?.({
       ok: saveResult.ok,
       storage: saveResult.storage,
+    })
+  })
+
+  socket.on('update-completed-result', async (updatedResult, callback) => {
+    if (!isAuthorized(socket) || !requireAdmin(socket)) return
+
+    const existingResult = completedResults.find((result) => result.id === updatedResult?.id)
+    if (!existingResult) {
+      callback?.({ ok: false, message: 'This completed result could not be found.' })
+      return
+    }
+
+    const homeScore = Math.max(0, Number(updatedResult.homeScore) || 0)
+    const awayScore = Math.max(0, Number(updatedResult.awayScore) || 0)
+    const validTeamIds = [existingResult.homeTeamId, existingResult.awayTeamId]
+    const events = Array.isArray(updatedResult.events)
+      ? updatedResult.events
+          .filter((event) => validTeamIds.includes(event.teamId) && ['Goal', 'Yellow Card', 'Red Card'].includes(event.type))
+          .map((event, index) => ({
+            id: event.id || `${Date.now()}-${index}`,
+            assist: String(event.assist ?? '').trim(),
+            minute: String(event.minute ?? '').trim(),
+            note: String(event.note ?? '').trim(),
+            scorer: String(event.scorer ?? '').trim(),
+            teamId: event.teamId,
+            type: event.type,
+          }))
+          .filter((event) => event.scorer)
+      : []
+    const homeGoals = events.filter((event) => event.type === 'Goal' && event.teamId === existingResult.homeTeamId).length
+    const awayGoals = events.filter((event) => event.type === 'Goal' && event.teamId === existingResult.awayTeamId).length
+
+    if (homeGoals !== homeScore || awayGoals !== awayScore) {
+      callback?.({
+        ok: false,
+        message: `The scorer entries must match the score (${homeGoals}-${awayGoals} entered, ${homeScore}-${awayScore} score).`,
+      })
+      return
+    }
+
+    const correctedResult = { ...existingResult, awayScore, events, homeScore, savedAt: new Date().toISOString() }
+    completedResults = completedResults.map((result) =>
+      result.id === correctedResult.id ? correctedResult : result,
+    )
+    emitState()
+    const saveResult = await saveLeagueState()
+    callback?.({
+      ok: saveResult.ok,
+      storage: saveResult.storage,
+      message: saveResult.ok && saveResult.storage === 'database'
+        ? 'Result updated permanently in PostgreSQL.'
+        : 'PostgreSQL update failed. Check the server logs.',
     })
   })
 })

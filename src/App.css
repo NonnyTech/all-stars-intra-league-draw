@@ -948,6 +948,61 @@ h2 {
   margin: 12px 0 0;
 }
 
+.manage-result-list,
+.edited-events {
+  display: grid;
+  gap: 10px;
+}
+
+.manage-result-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 170px minmax(0, 1fr) auto;
+  padding: 14px;
+}
+
+.manage-result-row span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.result-score-editor {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  margin-bottom: 18px;
+}
+
+.result-score-editor label {
+  display: grid;
+  gap: 7px;
+}
+
+.result-score-editor input {
+  font-size: 24px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.edited-event {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 150px 190px minmax(160px, 1fr) 80px auto;
+}
+
+.result-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .scoreboard {
   align-items: stretch;
   display: grid;
@@ -1309,8 +1364,14 @@ h2 {
   .match-event-form,
   .event-card,
   .result-scoreboard,
-  .match-scorers {
+  .match-scorers,
+  .manage-result-row,
+  .edited-event {
     grid-template-columns: 1fr;
+  }
+
+  .result-score-editor {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 
   .result-team,
