@@ -261,8 +261,13 @@ function App() {
   const displayedLeagueTable = currentLeagueTable.length > 0 ? currentLeagueTable : leagueTable
   const goalScorers = useMemo(() => {
     const scorers = new Map()
+    const sortedResults = [...completedResults].sort((a, b) => {
+      const aDate = new Date(a.savedAt || a.date).getTime()
+      const bDate = new Date(b.savedAt || b.date).getTime()
+      return aDate - bDate || String(a.id).localeCompare(String(b.id))
+    })
 
-    completedResults.forEach((result) => {
+    sortedResults.forEach((result) => {
       ;(result.events ?? []).forEach((event) => {
         if (event.type !== 'Goal' || !event.scorer?.trim()) return
 
@@ -271,15 +276,23 @@ function App() {
         const current = scorers.get(key)
         scorers.set(key, {
           goals: (current?.goals ?? 0) + 1,
+          goalDates: [...(current?.goalDates ?? []), new Date(result.savedAt || result.date).getTime()],
           player,
           teamId: event.teamId,
         })
       })
     })
 
-    return [...scorers.values()].sort(
-      (a, b) => b.goals - a.goals || a.player.localeCompare(b.player),
-    )
+    return [...scorers.values()]
+      .map((scorer) => ({
+        ...scorer,
+        reachedCurrentTotalAt: scorer.goalDates[scorer.goals - 1],
+      }))
+      .sort((a, b) =>
+        b.goals - a.goals ||
+        a.reachedCurrentTotalAt - b.reachedCurrentTotalAt ||
+        a.player.localeCompare(b.player),
+      )
   }, [completedResults])
 
   useEffect(() => {
